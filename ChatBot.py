@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
     page_icon="./images/동동이.PNG",
     layout="centered",
-    page_title="DongDongBot"
+    page_title="동동봇"
 )
 
 #====================================================================================================================
@@ -91,7 +91,7 @@ with st.sidebar:
 
 #====================================================================================================================
 # --- 챗봇 모델 및 세션 설정 ---
-MODEL_NAME = "gemini-1.5-flash-latest"
+MODEL_NAME = "gemini-2.5-flash-lite-preview-06-17"
 SAFETY_SETTINGS_NONE = {
     'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',
     'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE',
@@ -150,7 +150,7 @@ def initialize_chat_session():
 
 #====================================================================================================================
 # --- Streamlit 앱 메인 인터페이스 (이하 코드는 변경 없음) ---
-st.title("💬 동동봇과 대화하기")
+st.title("💬 동동봇에게 물어보살")
 if "messages" not in st.session_state: st.session_state.messages = []
 # API 키가 적용된 후, 자동으로 initialize_chat_session이 호출됨
 if st.session_state.get("api_key_configured"):
@@ -160,7 +160,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]): st.markdown(message["content"])
 
 # --- 사용자 입력 및 챗봇 응답 처리 ---
-if prompt := st.chat_input("무엇이 궁금하신가요?"):
+if prompt := st.chat_input("무엇이 궁금하신가요?       줄바꿈의 경우 [Shift + Enter] 이용"):
     if not st.session_state.get("api_key_configured", False):
         st.error("⚠️ API 키가 설정되지 않았습니다. 사이드바에서 API 키를 먼저 적용해주세요."); st.stop()
 

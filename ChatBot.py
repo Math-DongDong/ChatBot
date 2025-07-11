@@ -9,32 +9,26 @@ st.set_page_config(
     initial_sidebar_state="expanded",
     page_icon="./images/동동이.PNG",
     layout="centered",
-    page_title="동동봇"
+    page_title="DongDongBot"
 )
 
 #====================================================================================================================
 # --- 콜백 함수 정의 ---
 
-# [추가] System Instructions 변경 시 호출될 콜백 함수
 def auto_apply_system_instructions_on_change():
     """System Instructions 입력값이 변경될 때 호출되는 콜백 함수"""
-    # 1. text_area의 현재 값을 session_state에 저장
     new_instructions = st.session_state.get("system_instructions_input", "")
     st.session_state.system_instructions = new_instructions
     
-    # 2. 새로운 지침을 적용하기 위해 기존 챗봇 세션과 메시지 기록 초기화
-    #    이렇게 해야 다음 메시지 전송 시 새로운 지침으로 챗봇이 다시 시작됩니다.
     st.session_state.chat_session = None
     st.session_state.messages = []
 
-    # 3. 사용자에게 지침이 적용되었음을 알림 (선택 사항이지만 사용자 경험에 좋음)
     if new_instructions:
         st.toast("✅ System Instructions가 적용되었습니다. 새 대화를 시작합니다.")
     else:
         st.toast("ℹ️ System Instructions가 초기화되었습니다.")
 
 
-# --- Gemini API 키 설정 (사이드바) ---
 def auto_apply_api_key_on_change():
     entered_api_key = st.session_state.get("gemini_api_key_input_sidebar", "")
     st.session_state.api_key_error_text = None
@@ -73,9 +67,7 @@ with st.sidebar:
         <a href="https://aistudio.google.com/app/apikey" target="_blank">API 키 발급받기</a>
     </div>
     """, unsafe_allow_html=True)
-
-    # [추가] System Instructions 입력 필드
-    #st.divider() 
+    
     st.title("📜 System Instructions")
     st.text_area(
         "동동봇의 역할, 말투, 행동 방침을 자유롭게 지시하세요",
@@ -84,7 +76,6 @@ with st.sidebar:
         key="system_instructions_input",
         on_change=auto_apply_system_instructions_on_change
     )
-    # [추가 끝]
 
     if st.session_state.get("api_key_configured", False):
         st.success("✅ API 키가 성공적으로 적용되었습니다!")
@@ -112,16 +103,27 @@ def initialize_chat_session():
     if st.session_state.get("api_key_configured", False):
         if "chat_session" not in st.session_state or st.session_state.chat_session is None:
             try:
-                # [수정] system_instruction 파라미터 추가
                 system_instructions = st.session_state.get("system_instructions", "")
-                model = genai.GenerativeModel(
-                    MODEL_NAME, 
-                    safety_settings=SAFETY_SETTINGS_NONE,
-                    system_instruction=system_instructions # 모델 생성 시 지침 전달
-                )
+
+                # [수정] system_instructions가 비어있지 않을 때만 파라미터로 전달
+                if system_instructions and system_instructions.strip():
+                    model = genai.GenerativeModel(
+                        MODEL_NAME,
+                        safety_settings=SAFETY_SETTINGS_NONE,
+                        system_instruction=system_instructions
+                    )
+                else:
+                    # system_instructions가 비어있으면 파라미터 없이 모델 생성
+                    model = genai.GenerativeModel(
+                        MODEL_NAME,
+                        safety_settings=SAFETY_SETTINGS_NONE
+                    )
+                # [수정 끝]
+
                 st.session_state.chat_session = model.start_chat(history=[])
-            except Exception as e: # 모든 예외를 일단 잡고, 타입에 따라 분기하거나 공통 처리
-                st.session_state.chat_session = None # 실패 시 세션 None
+            except Exception as e: 
+                st.session_state.chat_session = None
+                # [수정] ValueError를 처리하는 로직 추가
                 err_type_msg = f"{type(e).__name__} - {e}"
                 specific_user_msg = f"[모델 로딩 실패] {err_type_msg}."
                 icon = "💥"
@@ -130,13 +132,16 @@ def initialize_chat_session():
                     st.session_state.api_key_configured = False
                     st.session_state.api_key_error_text = f"API 접근 권한 오류: {e}"
                     icon = "🚫"
-                elif isinstance(e, google_exceptions.NotFoundError):
+                elif isinstance(e, google_exceptions.NotFound):
                     specific_user_msg = f"[모델 로딩 실패] 모델('{MODEL_NAME}')을 찾을 수 없습니다: {e}. 모델 이름을 확인해주세요."
                     icon = "🤷"
-                elif isinstance(e, google_exceptions.GoogleAPIError): # PermissionDenied, NotFoundError 외 다른 API 오류
+                elif isinstance(e, ValueError): # Gemini가 잘못된 인자값에 대해 ValueError를 발생시킴
+                    specific_user_msg = f"[모델 로딩 실패] {err_type_msg}"
+                    icon = "🚨"
+                elif isinstance(e, google_exceptions.GoogleAPIError):
                     specific_user_msg = f"[모델 로딩 실패] Gemini API 오류: {e}. 잠시 후 다시 시도해주세요."
                     icon = "☁️"
-                elif isinstance(e, AttributeError): # genai.configure 실패 시 model.start_chat 등에서 발생 가능
+                elif isinstance(e, AttributeError):
                      specific_user_msg = "API 키가 올바르게 설정되지 않은 것 같습니다. 사이드바에서 확인해주세요."
                 st.error(specific_user_msg, icon=icon)
     else:
@@ -147,7 +152,10 @@ def initialize_chat_session():
 # --- Streamlit 앱 메인 인터페이스 (이하 코드는 변경 없음) ---
 st.title("💬 동동봇과 대화하기")
 if "messages" not in st.session_state: st.session_state.messages = []
-chat = initialize_chat_session()
+# API 키가 적용된 후, 자동으로 initialize_chat_session이 호출됨
+if st.session_state.get("api_key_configured"):
+    chat = initialize_chat_session()
+
 for message in st.session_state.messages:
     with st.chat_message(message["role"]): st.markdown(message["content"])
 
@@ -155,6 +163,8 @@ for message in st.session_state.messages:
 if prompt := st.chat_input("무엇이 궁금하신가요?"):
     if not st.session_state.get("api_key_configured", False):
         st.error("⚠️ API 키가 설정되지 않았습니다. 사이드바에서 API 키를 먼저 적용해주세요."); st.stop()
+
+    chat = st.session_state.get("chat_session") # 세션에서 chat 객체를 다시 가져옴
     if chat is None:
         chat = initialize_chat_session()
         if chat is None: st.error("⚠️ 동동봇을 시작할 수 없습니다. API 키, 모델, 네트워크를 확인해주세요."); st.stop()

@@ -9,10 +9,31 @@ st.set_page_config(
     initial_sidebar_state="expanded",
     page_icon="./images/동동이.PNG",
     layout="centered",
-    page_title="DongDongBot"
+    page_title="동동봇"
 )
 
 #====================================================================================================================
+# --- 콜백 함수 정의 ---
+
+# [추가] System Instructions 변경 시 호출될 콜백 함수
+def auto_apply_system_instructions_on_change():
+    """System Instructions 입력값이 변경될 때 호출되는 콜백 함수"""
+    # 1. text_area의 현재 값을 session_state에 저장
+    new_instructions = st.session_state.get("system_instructions_input", "")
+    st.session_state.system_instructions = new_instructions
+    
+    # 2. 새로운 지침을 적용하기 위해 기존 챗봇 세션과 메시지 기록 초기화
+    #    이렇게 해야 다음 메시지 전송 시 새로운 지침으로 챗봇이 다시 시작됩니다.
+    st.session_state.chat_session = None
+    st.session_state.messages = []
+
+    # 3. 사용자에게 지침이 적용되었음을 알림 (선택 사항이지만 사용자 경험에 좋음)
+    if new_instructions:
+        st.toast("✅ System Instructions가 적용되었습니다. 새 대화를 시작합니다.")
+    else:
+        st.toast("ℹ️ System Instructions가 초기화되었습니다.")
+
+
 # --- Gemini API 키 설정 (사이드바) ---
 def auto_apply_api_key_on_change():
     entered_api_key = st.session_state.get("gemini_api_key_input_sidebar", "")
@@ -52,6 +73,19 @@ with st.sidebar:
         <a href="https://aistudio.google.com/app/apikey" target="_blank">API 키 발급받기</a>
     </div>
     """, unsafe_allow_html=True)
+
+    # [추가] System Instructions 입력 필드
+    #st.divider() 
+    st.title("📜 System Instructions")
+    st.text_area(
+        "동동봇의 역할, 말투, 행동 방침을 자유롭게 지시하세요",
+        placeholder="예시: 너는 최고의 인공지능 선생님처럼 행동해. 모든 답변은 친절하고 상세하게 알려줘.",
+        height=150,
+        key="system_instructions_input",
+        on_change=auto_apply_system_instructions_on_change
+    )
+    # [추가 끝]
+
     if st.session_state.get("api_key_configured", False):
         st.success("✅ API 키가 성공적으로 적용되었습니다!")
         st.info("새로운 대화를 시작할 수 있습니다.")
@@ -78,7 +112,13 @@ def initialize_chat_session():
     if st.session_state.get("api_key_configured", False):
         if "chat_session" not in st.session_state or st.session_state.chat_session is None:
             try:
-                model = genai.GenerativeModel(MODEL_NAME, safety_settings=SAFETY_SETTINGS_NONE)
+                # [수정] system_instruction 파라미터 추가
+                system_instructions = st.session_state.get("system_instructions", "")
+                model = genai.GenerativeModel(
+                    MODEL_NAME, 
+                    safety_settings=SAFETY_SETTINGS_NONE,
+                    system_instruction=system_instructions # 모델 생성 시 지침 전달
+                )
                 st.session_state.chat_session = model.start_chat(history=[])
             except Exception as e: # 모든 예외를 일단 잡고, 타입에 따라 분기하거나 공통 처리
                 st.session_state.chat_session = None # 실패 시 세션 None
@@ -104,7 +144,7 @@ def initialize_chat_session():
     return st.session_state.get("chat_session")
 
 #====================================================================================================================
-# --- Streamlit 앱 메인 인터페이스 ---
+# --- Streamlit 앱 메인 인터페이스 (이하 코드는 변경 없음) ---
 st.title("💬 동동봇과 대화하기")
 if "messages" not in st.session_state: st.session_state.messages = []
 chat = initialize_chat_session()
@@ -126,9 +166,8 @@ if prompt := st.chat_input("무엇이 궁금하신가요?"):
         try:
             response_stream = chat.send_message(prompt, stream=True)
             
-            streamed_text_parts = [] # 스트리밍된 텍스트 조각들을 저장할 리스트
+            streamed_text_parts = []
 
-            # UI에 텍스트를 스트리밍하는 제너레이터 (내부에서 streamed_text_parts에 추가)
             def ui_text_stream_generator(response_stream_obj):
                 for chunk in response_stream_obj:
                     text_part = ""
@@ -136,34 +175,30 @@ if prompt := st.chat_input("무엇이 궁금하신가요?"):
                         for part in chunk.parts:
                             if hasattr(part, 'text') and part.text:
                                 text_part += part.text
-                    elif hasattr(chunk, 'text') and chunk.text: # 일부 API 버전/응답은 .text 직접 사용
+                    elif hasattr(chunk, 'text') and chunk.text:
                         text_part = chunk.text
                     
                     if text_part:
-                        streamed_text_parts.append(text_part) # 리스트에 조각 추가
-                        yield text_part # UI 렌더링을 위해 조각 반환
+                        streamed_text_parts.append(text_part)
+                        yield text_part
             
-            # st.write_stream에 제너레이터 전달하여 UI에 표시
             st.write_stream(ui_text_stream_generator(response_stream))
 
-            all_streamed_text = "".join(streamed_text_parts) # 모든 조각을 합쳐 전체 텍스트 생성
+            all_streamed_text = "".join(streamed_text_parts)
 
-            # --- 스트리밍 완료 후 처리 ---
-            if all_streamed_text: # 모델이 텍스트를 생성한 경우
+            if all_streamed_text:
                 st.session_state.messages.append({"role": "assistant", "content": all_streamed_text})
-            else: # 모델이 아무런 텍스트도 생성하지 않은 경우
+            else: 
                 try:
-                    response_stream.resolve() # 응답 객체의 최종 상태를 명시적으로 확인
+                    response_stream.resolve() 
                     
                     if response_stream.prompt_feedback and response_stream.prompt_feedback.block_reason:
-                        # ... (이전과 동일한 prompt_feedback 처리 로직) ...
                         block_reason_str = str(response_stream.prompt_feedback.block_reason).split('.')[-1]
                         error_message = f"⚠️ 요청 처리 불가 (프롬프트 차단: {block_reason_str}). 다른 질문을 시도해주세요."
                         st.warning(error_message)
                         st.session_state.messages.append({"role": "assistant", "content": error_message})
 
                     elif response_stream.candidates:
-                        # ... (이전과 동일한 candidates 처리 로직) ...
                         candidate = response_stream.candidates[0]
                         finish_reason_str = str(candidate.finish_reason).split('.')[-1].upper()
                         if finish_reason_str == "SAFETY":
@@ -192,8 +227,7 @@ if prompt := st.chat_input("무엇이 궁금하신가요?"):
                     st.error(err_msg_other, icon="🔥")
                     st.session_state.messages.append({"role": "assistant", "content": err_msg_other})
         
-        # --- 주요 API 및 SDK 예외 처리 (이전과 유사하게 유지) ---
-        except google_exceptions.GoogleAPIError as e: # 모든 Google API 오류의 기본 클래스
+        except google_exceptions.GoogleAPIError as e:
             detailed_error_message = getattr(e, 'message', str(e))
             err_msg = f"API 오류 ({type(e).__name__}): {detailed_error_message}."
             icon = "☁️"
@@ -213,7 +247,7 @@ if prompt := st.chat_input("무엇이 궁금하신가요?"):
             st.warning(err_msg)
             st.session_state.messages.append({"role": "assistant", "content": err_msg})
         except genai.types.StopCandidateException as e:
-            st.info("응답 생성이 중간에 중단되었습니다.") # 이미 생성된 부분은 표시됨
+            st.info("응답 생성이 중간에 중단되었습니다.")
         except Exception as e:
             err_msg = f"예상치 못한 오류 ({type(e).__name__}): {e}. 관리자에게 문의해주세요."
             st.error(err_msg, icon="💥")

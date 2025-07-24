@@ -19,7 +19,7 @@ import fitz  # PyMuPDF
 # --- 1. 페이지 기본 설정 ---
 st.set_page_config(
     page_title="동동봇",
-    page_icon="🤖", # 이모지 아이콘으로 변경 (또는 이미지 경로: "./images/동동이.PNG")
+    page_icon="./images/동동이.PNG", # 이모지 아이콘으로 변경 (또는 이미지 경로: "./images/동동이.PNG")
     layout="centered",
     initial_sidebar_state="expanded"
 )
@@ -93,7 +93,7 @@ with st.sidebar:
         "Gemini API 키:", 
         type="password", 
         placeholder="여기에 API 키를 붙여넣으세요.", 
-        help="API 키는 안전하게 보관하세요. 입력 시 자동으로 적용 시도됩니다.", 
+        help="API 키는 안전하게 보관하세요. 입력 시 자동으로 적용됩니다.", 
         key="gemini_api_key_input_sidebar", 
         on_change=auto_apply_api_key_on_change
     )
@@ -102,7 +102,7 @@ with st.sidebar:
     st.title("📜 System Instructions")
     st.text_area(
         "동동봇의 역할, 말투, 행동 방침을 자유롭게 지시하세요", 
-        placeholder="예시: 너는 최고의 인공지능 선생님처럼 행동해. 모든 답변은 친절하고 상세하게 알려줘.", 
+        placeholder="예시: 너는 최고의 인공지능 선생님처럼 행동해. 답변은 친절하고 상세하게 알려줘.", 
         height=150, 
         key="system_instructions_input", 
         on_change=auto_apply_system_instructions_on_change
@@ -117,7 +117,7 @@ with st.sidebar:
     )
 
 # --- 4. 챗봇 모델 및 세션 설정 ---
-MODEL_NAME = "gemini-1.5-pro-latest"
+MODEL_NAME = "gemini-2.5-pro"
 SAFETY_SETTINGS_NONE = {
     'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE',
     'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',

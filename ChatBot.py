@@ -19,17 +19,15 @@ import fitz  # PyMuPDF
 # --- 1. 페이지 기본 설정 ---
 st.set_page_config(
     page_title="동동봇",
-    page_icon="./images/동동이.PNG", # 이모지 아이콘으로 변경 (또는 이미지 경로: "./images/동동이.PNG")
+    page_icon="./images/동동이.PNG",
     layout="centered",
     initial_sidebar_state="expanded"
 )
 
 # --- 2. 콜백 함수 정의 ---
-# System Instructions가 변경될 때 실행되는 함수
 def auto_apply_system_instructions_on_change():
     new_instructions = st.session_state.get("system_instructions_input", "")
     st.session_state.system_instructions = new_instructions
-    # 설정 변경 시, 현재 채팅 세션과 메시지 기록을 초기화하여 새 대화를 유도
     st.session_state.chat_session = None
     st.session_state.messages = []
     if new_instructions:
@@ -37,13 +35,11 @@ def auto_apply_system_instructions_on_change():
     else:
         st.toast("ℹ️ System Instructions가 초기화되었습니다.")
 
-# API 키 입력이 변경될 때 실행되는 함수
 def auto_apply_api_key_on_change():
     entered_api_key = st.session_state.get("gemini_api_key_input_sidebar", "")
     st.session_state.api_key_error_text = None
     
     if not entered_api_key:
-        # API 키가 비워진 경우, 설정 상태를 해제하고 세션 초기화
         if st.session_state.get("api_key_configured", False) or st.session_state.get("current_api_key"):
             st.session_state.api_key_configured = False
             st.session_state.current_api_key = None
@@ -51,16 +47,13 @@ def auto_apply_api_key_on_change():
             st.session_state.messages = []
         return
 
-    # 이미 동일한 키로 설정된 경우, 아무것도 하지 않음
     if st.session_state.get("api_key_configured", False) and st.session_state.get("current_api_key") == entered_api_key:
         return
 
-    # 새로운 API 키 적용 시도
     try:
         genai.configure(api_key=entered_api_key)
         st.session_state.api_key_configured = True
         st.session_state.current_api_key = entered_api_key
-        # 키 변경 시, 채팅 세션과 메시지 기록을 초기화
         st.session_state.chat_session = None
         st.session_state.messages = []
     except Exception as e:
@@ -73,7 +66,6 @@ def auto_apply_api_key_on_change():
 
 # --- 3. 사이드바 UI 구성 ---
 with st.sidebar:
-    # --- API 키 상태 메시지 (최상단 배치) ---
     if st.session_state.get("api_key_configured", False): 
         st.success("✅ API 키가 성공적으로 적용되었습니다!")
         st.info("새로운 대화를 시작할 수 있습니다.")
@@ -87,15 +79,11 @@ with st.sidebar:
     
     st.divider()
     
-    # --- 설정 섹션 ---
     st.title("🔑 API 키 설정")
     st.text_input(
-        "Gemini API 키:", 
-        type="password", 
-        placeholder="여기에 API 키를 붙여넣으세요.", 
+        "Gemini API 키:", type="password", placeholder="여기에 API 키를 붙여넣으세요.", 
         help="API 키는 안전하게 보관하세요. 입력 시 자동으로 적용됩니다.", 
-        key="gemini_api_key_input_sidebar", 
-        on_change=auto_apply_api_key_on_change
+        key="gemini_api_key_input_sidebar", on_change=auto_apply_api_key_on_change
     )
     st.markdown("""<div style="text-align: right; font-size: small;"><a href="https://aistudio.google.com/app/apikey" target="_blank">API 키 발급받기</a></div>""", unsafe_allow_html=True)
     
@@ -103,27 +91,31 @@ with st.sidebar:
     st.text_area(
         "동동봇의 역할, 말투, 행동 방침을 자유롭게 지시하세요", 
         placeholder="예시: 너는 최고의 인공지능 선생님처럼 행동해. 답변은 친절하고 상세하게 알려줘.", 
-        height=150, 
-        key="system_instructions_input", 
-        on_change=auto_apply_system_instructions_on_change
+        height=150, key="system_instructions_input", on_change=auto_apply_system_instructions_on_change
     )
     
     st.title("📎 파일 첨부")
     st.file_uploader(
-        "이미지 또는 PDF 파일:", 
-        type=['png', 'jpg', 'jpeg', 'gif', 'pdf'], 
-        accept_multiple_files=True, 
-        key="uploaded_files_sidebar"  # 고정된 키를 사용하여 파일 상태를 유지
+        "이미지 또는 PDF 파일:", type=['png', 'jpg', 'jpeg', 'gif', 'pdf'], 
+        accept_multiple_files=True, key="uploaded_files_sidebar"
     )
 
 # --- 4. 챗봇 모델 및 세션 설정 ---
-MODEL_NAME = "gemini-2.5-pro"
+MODEL_NAME = "gemini-2.5-pro"  # 기본 모델을 gemini-pro로 유지하고, vision은 파일 첨부 시 모델이 자동으로 처리
 SAFETY_SETTINGS_NONE = {
-    'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE',
-    'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',
-    'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE',
-    'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'
+    'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',
+    'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'
 }
+
+# [새로 추가된 부분] 스트림 핸들러 함수
+def stream_handler(response_stream):
+    """
+    Gemini API의 응답 스트림(객체)을 받아,
+    그 안의 텍스트(string)만 추출하여 반환하는 제너레이터 함수.
+    """
+    for chunk in response_stream:
+        if chunk.text:
+            yield chunk.text
 
 def initialize_chat_session():
     if not st.session_state.get("api_key_configured", False):
@@ -131,12 +123,15 @@ def initialize_chat_session():
     
     if "chat_session" not in st.session_state or st.session_state.chat_session is None:
         try:
+            # 파일 첨부 여부에 따라 모델을 동적으로 결정
+            model_to_use = "gemini-pro-vision" if st.session_state.get("uploaded_files_sidebar") else "gemini-pro"
+
             system_instructions = st.session_state.get("system_instructions", "")
             model_kwargs = {"safety_settings": SAFETY_SETTINGS_NONE}
             if system_instructions and system_instructions.strip():
                 model_kwargs["system_instruction"] = system_instructions
             
-            model = genai.GenerativeModel(MODEL_NAME, **model_kwargs)
+            model = genai.GenerativeModel(model_to_use, **model_kwargs)
             st.session_state.chat_session = model.start_chat(history=[])
         except Exception as e:
             st.session_state.chat_session = None
@@ -148,35 +143,30 @@ def initialize_chat_session():
 # --- 5. 메인 채팅 인터페이스 ---
 st.title("💬 동동봇에게 물어보살")
 
-# 채팅 기록 초기화 및 표시
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# 채팅 세션 초기화 시도
 chat = initialize_chat_session()
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 사용자 입력 처리
 if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바꿈)"):
-    # API 키 설정 여부 재확인
     if not chat:
         st.error("⚠️ API 키가 설정되지 않았습니다. 사이드바에서 API 키를 먼저 적용해주세요.")
         st.stop()
 
-    # --- 첨부 파일 처리 ---
     content_parts = [prompt]
     pil_images_for_display = []
     uploaded_filenames = []
     
-    # st.session_state에서 유지되고 있는 파일 목록을 가져옴
     staged_files = st.session_state.get("uploaded_files_sidebar", [])
     if staged_files:
+        # 파일이 있으면 Vision 모델로 전환
+        chat.model_name = "gemini-pro-vision"
         for uploaded_file in staged_files:
             uploaded_filenames.append(uploaded_file.name)
-            # 파일 포인터를 처음으로 되돌림 (중요)
             uploaded_file.seek(0)
             
             if uploaded_file.type.startswith("image/"):
@@ -195,7 +185,6 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                 except Exception as e:
                     st.error(f"PDF 파일 '{uploaded_file.name}' 처리 중 오류: {e}")
 
-    # --- 사용자 메시지 표시 ---
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -205,19 +194,16 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
             file_info_str = ", ".join([f"'{f}'" for f in uploaded_filenames])
             st.info(f"📄 다음 파일과 함께 질문: {file_info_str}")
 
-    # --- 챗봇 응답 처리 및 표시 ---
     with st.chat_message("assistant"):
         try:
             response_stream = chat.send_message(content_parts, stream=True)
             
-            # 스트리밍 응답을 화면에 표시
-            response_text = st.write_stream(response_stream)
+            # [수정된 부분] 스트림 핸들러를 통해 응답을 정제합니다.
+            response_text = st.write_stream(stream_handler(response_stream))
             
-            # 전체 응답 텍스트를 메시지 기록에 저장
             if response_text:
                 st.session_state.messages.append({"role": "assistant", "content": response_text})
             else:
-                # 스트리밍 후에도 텍스트가 없는 경우 (차단 등)
                 st.warning("모델로부터 응답을 받지 못했습니다. 안전 설정에 의해 차단되었을 수 있습니다.")
                 st.session_state.messages.append({"role": "assistant", "content": "⚠️ 응답 없음"})
 

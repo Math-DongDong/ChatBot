@@ -164,7 +164,7 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
     staged_files = st.session_state.get("uploaded_files_sidebar", [])
     if staged_files:
         # 파일이 있으면 Vision 모델로 전환
-        chat.model_name = "gemini-pro-vision"
+        chat.model_name = "gemini-2.5-pro"
         for uploaded_file in staged_files:
             uploaded_filenames.append(uploaded_file.name)
             uploaded_file.seek(0)

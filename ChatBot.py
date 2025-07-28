@@ -1,11 +1,8 @@
 # ====================================================================================
-#  Gemini AI 챗봇 (Streamlit) - gemini-2.5-pro 적용 최종 버전
+#  Gemini AI 챗봇 (Streamlit) - HTML 파일 처리 기능 추가 버전
 # ====================================================================================
-# 기능:
-# - API 키 및 System Instructions 설정 (사이드바)
-# - 이미지/PDF 파일 첨부 기능 (지속성)
-# - 실시간 스트리밍 채팅 응답
-# - 안정적인 상태 관리 및 오류 처리
+# 변경 사항:
+# - HTML 파일('text/html')을 업로드하고 텍스트로 읽어 모델에 전달하는 기능 추가
 # ====================================================================================
 
 import streamlit as st
@@ -29,9 +26,8 @@ def auto_apply_system_instructions_on_change():
     new_instructions = st.session_state.get("system_instructions_input", "")
     st.session_state.system_instructions = new_instructions
     st.session_state.chat_session = None
-    st.session_state.messages = []
     if new_instructions:
-        st.toast("✅ System Instructions가 적용되었습니다. 새 대화를 시작합니다.")
+        st.toast("✅ System Instructions가 변경되었습니다. 다음 메시지부터 적용됩니다.")
     else:
         st.toast("ℹ️ System Instructions가 초기화되었습니다.")
 
@@ -56,6 +52,7 @@ def auto_apply_api_key_on_change():
         st.session_state.current_api_key = entered_api_key
         st.session_state.chat_session = None
         st.session_state.messages = []
+        st.toast("✅ API 키가 성공적으로 적용되었습니다! 새 대화를 시작합니다.")
     except Exception as e:
         st.session_state.api_key_configured = False
         st.session_state.current_api_key = None
@@ -64,21 +61,16 @@ def auto_apply_api_key_on_change():
         st.session_state.messages = []
 
 
-# --- 3. 사이드바 UI 구성 (변경 없음) ---
+# --- 3. 사이드바 UI 구성 ---
 with st.sidebar:
-    if st.session_state.get("api_key_configured", False): 
-        st.success("✅ API 키가 성공적으로 적용되었습니다!")
-        st.info("새로운 대화를 시작할 수 있습니다.")
-    else:
+    if not st.session_state.get("api_key_configured", False):
         error_message = st.session_state.get("api_key_error_text")
         if error_message: 
             st.error(error_message)
             st.warning("올바른 API 키인지 확인하거나 새 키를 입력해주세요.")
         elif not st.session_state.get("gemini_api_key_input_sidebar", ""): 
             st.warning("API 키를 입력해주세요.")
-    
-    st.divider()
-    
+        
     st.title("🔑 API 키 설정")
     st.text_input(
         "Gemini API 키:", type="password", placeholder="여기에 API 키를 붙여넣으세요.", 
@@ -95,14 +87,14 @@ with st.sidebar:
     )
     
     st.title("📎 파일 첨부")
+    # [수정] file_uploader의 type에 'html', 'htm'을 추가하여 HTML 파일을 업로드할 수 있게 합니다.
     st.file_uploader(
-        "이미지 또는 PDF 파일:", type=['png', 'jpg', 'jpeg', 'gif', 'pdf'], 
+        "이미지, PDF, HTML 파일:", type=['png', 'jpg', 'jpeg', 'gif', 'pdf', 'html', 'htm'], 
         accept_multiple_files=True, key="uploaded_files_sidebar"
     )
 
-# --- 4. 챗봇 모델 및 세션 설정 ---
-# [수정] 기본 모델을 'gemini-2.5-pro'로 정확히 변경합니다.
-MODEL_NAME = "gemini-2.5-pro"  
+# --- 4. 챗봇 모델 및 세션 설정 (변경 없음) ---
+MODEL_NAME = "gemini-2.5-flash"
 SAFETY_SETTINGS_NONE = {
     'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',
     'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'
@@ -125,7 +117,15 @@ def initialize_chat_session():
                 model_kwargs["system_instruction"] = system_instructions
             
             model = genai.GenerativeModel(MODEL_NAME, **model_kwargs)
-            st.session_state.chat_session = model.start_chat(history=[])
+            
+            gemini_history = [
+                {"role": "model" if msg["role"] == "assistant" else msg["role"], 
+                 "parts": [msg["content"]]}
+                for msg in st.session_state.get("messages", [])
+            ]
+            
+            st.session_state.chat_session = model.start_chat(history=gemini_history)
+
         except Exception as e:
             st.session_state.chat_session = None
             err_msg = f"모델 로딩 실패: {type(e).__name__} - {e}"
@@ -133,7 +133,7 @@ def initialize_chat_session():
     
     return st.session_state.get("chat_session")
 
-# --- 5. 메인 채팅 인터페이스 (변경 없음) ---
+# --- 5. 메인 채팅 인터페이스 ---
 st.title("💬 동동봇에게 물어보살")
 
 if "messages" not in st.session_state:
@@ -175,6 +175,18 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                     content_parts.append(pdf_content)
                 except Exception as e:
                     st.error(f"PDF 파일 '{uploaded_file.name}' 처리 중 오류: {e}")
+            # [추가] HTML 파일 처리 로직
+            elif uploaded_file.type == "text/html":
+                try:
+                    # 파일의 바이트 내용을 읽어 'utf-8'로 디코딩하여 문자열로 변환합니다.
+                    html_bytes = uploaded_file.read()
+                    html_code = html_bytes.decode('utf-8')
+                    # 모델이 HTML 코드임을 명확히 알 수 있도록 구분자를 추가하여 전달합니다.
+                    html_content = f"--- HTML 코드 시작: {uploaded_file.name} ---\n\n{html_code}\n\n--- HTML 코드 끝 ---"
+                    content_parts.append(html_content)
+                except Exception as e:
+                    st.error(f"HTML 파일 '{uploaded_file.name}' 처리 중 오류: {e}")
+
 
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -186,21 +198,22 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
             st.info(f"📄 다음 파일과 함께 질문: {file_info_str}")
 
     with st.chat_message("assistant"):
-        try:
-            response_stream = chat.send_message(content_parts, stream=True)
-            response_text = st.write_stream(stream_handler(response_stream))
-            
-            if response_text:
-                st.session_state.messages.append({"role": "assistant", "content": response_text})
-            else:
-                st.warning("모델로부터 응답을 받지 못했습니다. 안전 설정에 의해 차단되었을 수 있습니다.")
-                st.session_state.messages.append({"role": "assistant", "content": "⚠️ 응답 없음"})
+        with st.spinner("동동봇 생각 중... 🤔",show_time=True):
+            try:
+                response_stream = chat.send_message(content_parts, stream=True)
+                response_text = st.write_stream(stream_handler(response_stream))
+                
+                if response_text:
+                    st.session_state.messages.append({"role": "assistant", "content": response_text})
+                else:
+                    st.warning("모델로부터 응답을 받지 못했습니다. 안전 설정에 의해 차단되었을 수 있습니다.")
+                    st.session_state.messages.append({"role": "assistant", "content": "⚠️ 응답 없음"})
 
-        except (google_exceptions.GoogleAPIError, IncompleteIterationError, genai.types.BlockedPromptException, genai.types.StopCandidateException) as e:
-            error_message = f"오류 발생 ({type(e).__name__}): {e}"
-            st.error(error_message, icon="🚨")
-            st.session_state.messages.append({"role": "assistant", "content": error_message})
-        except Exception as e:
-            error_message = f"예상치 못한 오류 발생: {type(e).__name__} - {e}"
-            st.error(error_message, icon="💥")
-            st.session_state.messages.append({"role": "assistant", "content": error_message})
+            except (google_exceptions.GoogleAPIError, IncompleteIterationError, genai.types.BlockedPromptException, genai.types.StopCandidateException) as e:
+                error_message = f"오류 발생 ({type(e).__name__}): {e}"
+                st.error(error_message, icon="🚨")
+                st.session_state.messages.append({"role": "assistant", "content": error_message})
+            except Exception as e:
+                error_message = f"예상치 못한 오류 발생: {type(e).__name__} - {e}"
+                st.error(error_message, icon="💥")
+                st.session_state.messages.append({"role": "assistant", "content": error_message})

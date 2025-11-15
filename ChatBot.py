@@ -94,7 +94,7 @@ with st.sidebar:
     )
 
 # --- 4. 챗봇 모델 및 세션 설정 (변경 없음) ---
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-2.5-pro"  #"gemini-2.5-flash"
 SAFETY_SETTINGS_NONE = {
     'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',
     'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'

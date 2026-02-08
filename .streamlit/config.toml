@@ -1,6 +1,6 @@
 [client]
 # 에러 표시 코드 숨김
-showErrorDetails = false
+showErrorDetails = "none"
 
 # "Running..." 표시 숨김 
 showSpinner = false

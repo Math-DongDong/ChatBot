@@ -108,10 +108,9 @@ with st.sidebar:
     st.title("🔑 GEMINI 사용 키 설정")
     st.text_input(
         "Key:", type="password", placeholder="GEMINI 사용 키를 입력하세요.", 
-        help="선생님께서 알려주는 GEMINI API 키를 입력해주세요.", 
+        help="선생님께서 알려주는 GEMINI 사용 키를 입력해주세요.", 
         key="gemini_api_key_input_sidebar", on_change=auto_apply_api_key_on_change
     )
-    st.markdown("""<div style="text-align: right; font-size: small;"><a href="https://aistudio.google.com/app/apikey" target="_blank">API 키 발급받기</a></div>""", unsafe_allow_html=True)
     
     st.title("📜 System Instructions")
     st.text_area(

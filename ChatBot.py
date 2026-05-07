@@ -95,6 +95,11 @@ def auto_apply_api_key_on_change():
         st.session_state.messages = []
 
 
+def reset_chat_session_on_model_change():
+    st.session_state.chat_session = None
+    st.session_state.messages = []
+
+
 # --- 3. 사이드바 UI 구성 ---
 with st.sidebar:
     if not st.session_state.get("api_key_configured", False):
@@ -126,8 +131,16 @@ with st.sidebar:
         accept_multiple_files=True, key="uploaded_files_sidebar"
     )
 
-# --- 4. 챗봇 모델 및 세션 설정 (변경 없음) ---
-MODEL_NAME = "gemini-2.5-pro"  #"gemini-2.5-flash"
+# --- 4. 챗봇 모델 및 세션 설정 ---
+MODEL_OPTIONS = ["Gemini 2.5 Flash", "Gemini 2.5 Pro"]
+MODEL_NAME_MAP = {
+    "Gemini 2.5 Flash": "gemini-2.5-flash",
+    "Gemini 2.5 Pro": "gemini-2.5-pro"
+}
+
+if "selected_gemini_model" not in st.session_state:
+    st.session_state.selected_gemini_model = MODEL_OPTIONS[0]
+
 SAFETY_SETTINGS_NONE = {
     'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',
     'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'
@@ -149,7 +162,9 @@ def initialize_chat_session():
             if system_instructions and system_instructions.strip():
                 model_kwargs["system_instruction"] = system_instructions
             
-            model = genai.GenerativeModel(MODEL_NAME, **model_kwargs)
+            selected_model_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
+            model_name = MODEL_NAME_MAP.get(selected_model_label, MODEL_NAME_MAP[MODEL_OPTIONS[0]])
+            model = genai.GenerativeModel(model_name, **model_kwargs)
             
             gemini_history = [
                 {"role": "model" if msg["role"] == "assistant" else msg["role"], 
@@ -167,7 +182,17 @@ def initialize_chat_session():
     return st.session_state.get("chat_session")
 
 # --- 5. 메인 채팅 인터페이스 ---
-st.title("💬 동동봇에게 물어보살")
+col1, col2 = st.columns([4, 1])
+with col1:
+    st.title("💬 동동봇에게 물어보살")
+with col2:
+    st.selectbox(
+        "모델 선택",
+        options=MODEL_OPTIONS,
+        key="selected_gemini_model",
+        help="Gemini 모델을 선택하세요. 기본값은 Gemini 2.5 Flash입니다.",
+        on_change=reset_chat_session_on_model_change
+    )
 
 if "messages" not in st.session_state:
     st.session_state.messages = []

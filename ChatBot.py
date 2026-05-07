@@ -190,7 +190,7 @@ with col2:
         "모델 선택",
         options=MODEL_OPTIONS,
         key="selected_gemini_model",
-        help="Gemini 모델을 선택하세요. 기본값은 Gemini 2.5 Flash입니다.",
+        help="Gemini 모델을 선택하세요.",
         on_change=reset_chat_session_on_model_change
     )
 

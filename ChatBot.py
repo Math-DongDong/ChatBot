@@ -38,6 +38,8 @@ def load_api_key_from_secrets(password):
                 return api_key, None
             else:
                 return None, "Secrets에 APIKEY가 없습니다."
+        else:
+            return None, "비밀번호가 일치하지 않습니다."
     
     except Exception as e:
         return None, f"Secrets 읽기 중 오류: {e}"

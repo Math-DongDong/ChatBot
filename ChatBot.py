@@ -12,6 +12,8 @@ from google.generativeai.types import IncompleteIterationError
 import io
 from PIL import Image
 import fitz  # PyMuPDF
+import toml
+import os
 
 # --- 1. 페이지 기본 설정 ---
 st.set_page_config(
@@ -21,7 +23,28 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. 콜백 함수 정의 (변경 없음) ---
+# --- 1-1. Streamlit Secrets에서 API 키 로드 함수 ---
+def load_api_key_from_secrets(password):
+    """
+    Streamlit Secrets에서 비밀번호에 맞는 API 키를 조회합니다.
+    """
+    try:
+        db_credentials = st.secrets.get("db_credentials", {})
+        
+        # Password와 일치하는 항목 찾기
+        if db_credentials.get("Password") == password:
+            api_key = db_credentials.get("APIKEY")
+            if api_key:
+                return api_key, None
+            else:
+                return None, "Secrets에 APIKEY가 없습니다."
+        else:
+            return None, "비밀번호가 일치하지 않습니다."
+    
+    except Exception as e:
+        return None, f"Secrets 읽기 중 오류: {e}"
+
+# --- 2. 콜백 함수 정의 ---
 def auto_apply_system_instructions_on_change():
     new_instructions = st.session_state.get("system_instructions_input", "")
     st.session_state.system_instructions = new_instructions
@@ -32,10 +55,10 @@ def auto_apply_system_instructions_on_change():
         st.toast("ℹ️ System Instructions가 초기화되었습니다.")
 
 def auto_apply_api_key_on_change():
-    entered_api_key = st.session_state.get("gemini_api_key_input_sidebar", "")
+    entered_password = st.session_state.get("gemini_api_key_input_sidebar", "")
     st.session_state.api_key_error_text = None
     
-    if not entered_api_key:
+    if not entered_password:
         if st.session_state.get("api_key_configured", False) or st.session_state.get("current_api_key"):
             st.session_state.api_key_configured = False
             st.session_state.current_api_key = None
@@ -43,13 +66,24 @@ def auto_apply_api_key_on_change():
             st.session_state.messages = []
         return
 
-    if st.session_state.get("api_key_configured", False) and st.session_state.get("current_api_key") == entered_api_key:
+    # Streamlit Secrets에서 API 키 로드
+    api_key, error_msg = load_api_key_from_secrets(entered_password)
+    
+    if error_msg:
+        st.session_state.api_key_configured = False
+        st.session_state.current_api_key = None
+        st.session_state.api_key_error_text = error_msg
+        st.session_state.chat_session = None
+        st.session_state.messages = []
+        return
+    
+    if st.session_state.get("api_key_configured", False) and st.session_state.get("current_api_key") == api_key:
         return
 
     try:
-        genai.configure(api_key=entered_api_key)
+        genai.configure(api_key=api_key)
         st.session_state.api_key_configured = True
-        st.session_state.current_api_key = entered_api_key
+        st.session_state.current_api_key = api_key
         st.session_state.chat_session = None
         st.session_state.messages = []
         st.toast("✅ API 키가 성공적으로 적용되었습니다! 새 대화를 시작합니다.")
@@ -73,8 +107,8 @@ with st.sidebar:
         
     st.title("🔑 API 키 설정")
     st.text_input(
-        "Gemini API 키:", type="password", placeholder="여기에 API 키를 붙여넣으세요.", 
-        help="API 키는 안전하게 보관하세요. 입력 시 자동으로 적용됩니다.", 
+        "비밀번호:", type="password", placeholder="config.toml의 비밀번호를 입력하세요.", 
+        help="입력한 비밀번호와 일치하는 APIKEY가 config.toml에서 자동으로 로드됩니다.", 
         key="gemini_api_key_input_sidebar", on_change=auto_apply_api_key_on_change
     )
     st.markdown("""<div style="text-align: right; font-size: small;"><a href="https://aistudio.google.com/app/apikey" target="_blank">API 키 발급받기</a></div>""", unsafe_allow_html=True)

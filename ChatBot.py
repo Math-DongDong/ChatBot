@@ -19,7 +19,7 @@ import os
 st.set_page_config(
     page_title="동동봇",
     page_icon="./images/동동이.PNG",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="expanded"
 )
 
@@ -101,14 +101,14 @@ with st.sidebar:
         error_message = st.session_state.get("api_key_error_text")
         if error_message: 
             st.error(error_message)
-            st.warning("올바른 API 키인지 확인하거나 새 키를 입력해주세요.")
+            st.warning("올바른 GEMINI 사용 키인지 확인해주세요.")
         elif not st.session_state.get("gemini_api_key_input_sidebar", ""): 
-            st.warning("API 키를 입력해주세요.")
+            st.warning("GEMINI 사용 키를 입력해주세요.")
         
-    st.title("🔑 API 키 설정")
+    st.title("🔑 GEMINI 사용 키 설정")
     st.text_input(
-        "비밀번호:", type="password", placeholder="config.toml의 비밀번호를 입력하세요.", 
-        help="입력한 비밀번호와 일치하는 APIKEY가 config.toml에서 자동으로 로드됩니다.", 
+        "Key:", type="password", placeholder="GEMINI 사용 키를 입력하세요.", 
+        help="선생님께서 알려주는 GEMINI API 키를 입력해주세요.", 
         key="gemini_api_key_input_sidebar", on_change=auto_apply_api_key_on_change
     )
     st.markdown("""<div style="text-align: right; font-size: small;"><a href="https://aistudio.google.com/app/apikey" target="_blank">API 키 발급받기</a></div>""", unsafe_allow_html=True)

@@ -149,8 +149,30 @@ SAFETY_SETTINGS_NONE = {
 
 def stream_handler(response_stream):
     for chunk in response_stream:
-        if chunk.text:
+        if getattr(chunk, "text", None):
             yield chunk.text
+
+
+def extract_response_parts(response):
+    text_output = []
+    image_outputs = []
+
+    for candidate in getattr(response, "candidates", []) or []:
+        content = getattr(candidate, "content", None)
+        if content is None:
+            continue
+
+        for part in getattr(content, "parts", []) or []:
+            part_text = getattr(part, "text", None)
+            if part_text:
+                text_output.append(part_text)
+
+            inline_data = getattr(part, "inline_data", None)
+            if inline_data is not None and getattr(inline_data, "data", None):
+                image_outputs.append((inline_data.data, getattr(inline_data, "mime_type", "image/png")))
+
+    return "\n".join(text_output).strip(), image_outputs
+
 
 def initialize_chat_session():
     if not st.session_state.get("api_key_configured", False):
@@ -259,14 +281,36 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
     with st.chat_message("assistant"):
         with st.spinner("동동봇 생각 중... 🤔",show_time=True):
             try:
-                response_stream = chat.send_message(content_parts, stream=True)
-                response_text = st.write_stream(stream_handler(response_stream))
-                
-                if response_text:
-                    st.session_state.messages.append({"role": "assistant", "content": response_text})
+                selected_model_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
+                is_image_model = selected_model_label == "Nano Banana"
+
+                if is_image_model:
+                    response = chat.send_message(content_parts, stream=False)
+                    response_text, response_images = extract_response_parts(response)
+                    if response_text:
+                        st.markdown(response_text)
                 else:
-                    st.warning("모델로부터 응답을 받지 못했습니다. 안전 설정에 의해 차단되었을 수 있습니다.")
-                    st.session_state.messages.append({"role": "assistant", "content": "⚠️ 응답 없음"})
+                    response = chat.send_message(content_parts, stream=True)
+                    response_text = ""
+                    for chunk in response:
+                        chunk_text = getattr(chunk, "text", None)
+                        if chunk_text:
+                            response_text += chunk_text
+                            st.markdown(chunk_text)
+                    response_text = response_text.strip()
+                    _, response_images = extract_response_parts(response)
+
+                if response_images:
+                    for image_bytes, mime_type in response_images:
+                        try:
+                            st.image(Image.open(io.BytesIO(image_bytes)), use_column_width=True)
+                        except Exception:
+                            st.warning("이미지 응답을 표시하는 중 문제가 발생했습니다.")
+
+                assistant_content = response_text if response_text else (
+                    "이미지 응답이 생성되었습니다." if response_images else "⚠️ 응답 없음"
+                )
+                st.session_state.messages.append({"role": "assistant", "content": assistant_content})
 
             except (google_exceptions.GoogleAPIError, IncompleteIterationError, genai.types.BlockedPromptException, genai.types.StopCandidateException) as e:
                 error_message = f"오류 발생 ({type(e).__name__}): {e}"

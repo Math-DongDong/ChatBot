@@ -132,10 +132,11 @@ with st.sidebar:
     )
 
 # --- 4. 챗봇 모델 및 세션 설정 ---
-MODEL_OPTIONS = ["Gemini 2.5 Flash", "Gemini 2.5 Pro"]
+MODEL_OPTIONS = ["Gemini 2.5 Flash", "Gemini 2.5 Pro", "Nano Banana"]
 MODEL_NAME_MAP = {
     "Gemini 2.5 Flash": "gemini-2.5-flash",
-    "Gemini 2.5 Pro": "gemini-2.5-pro"
+    "Gemini 2.5 Pro": "gemini-2.5-pro",
+    "Nano Banana": "gemini-2.5-flash-image"
 }
 
 if "selected_gemini_model" not in st.session_state:
@@ -190,7 +191,7 @@ with col2:
         "모델 선택",
         options=MODEL_OPTIONS,
         key="selected_gemini_model",
-        help="Gemini 모델을 선택하세요.",
+        help="Gemini 모델을 선택하세요. Nano Banana는 이미지 생성 모델도 지원합니다.",
         on_change=reset_chat_session_on_model_change
     )
 

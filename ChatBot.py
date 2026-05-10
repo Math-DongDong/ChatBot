@@ -207,13 +207,13 @@ def initialize_chat_session():
 # --- 5. 메인 채팅 인터페이스 ---
 col1, col2 = st.columns([4, 1])
 with col1:
-    st.title("💬 동동봇에게 물어보살")
+    st.title("💬 동동봇")
 with col2:
     st.selectbox(
         "모델 선택",
         options=MODEL_OPTIONS,
         key="selected_gemini_model",
-        help="Gemini 모델을 선택하세요. Nano Banana는 이미지 생성 모델도 지원합니다.",
+        help="Gemini 모델을 선택하세요.",
         on_change=reset_chat_session_on_model_change
     )
 
@@ -228,7 +228,7 @@ for message in st.session_state.messages:
 
 if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바꿈)"):
     if not chat:
-        st.error("⚠️ API 키가 설정되지 않았습니다. 사이드바에서 API 키를 먼저 적용해주세요.")
+        st.error("⚠️ GEMINI 사용 키가 설정되지 않았습니다. 사이드바에서 사용 키를 먼저 적용해주세요.")
         st.stop()
 
     content_parts = [prompt]

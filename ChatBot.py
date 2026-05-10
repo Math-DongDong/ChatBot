@@ -303,7 +303,7 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                 if response_images:
                     for image_bytes, mime_type in response_images:
                         try:
-                            st.image(Image.open(io.BytesIO(image_bytes)), use_column_width=True)
+                            st.image(Image.open(io.BytesIO(image_bytes)), use_container_width=True)
                         except Exception:
                             st.warning("이미지 응답을 표시하는 중 문제가 발생했습니다.")
 

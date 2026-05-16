@@ -3,6 +3,7 @@
 # ====================================================================================
 # 변경 사항:
 # - HTML 파일('text/html')을 업로드하고 텍스트로 읽어 모델에 전달하는 기능 추가
+# - [수정] 스트리밍 시 HTML 코드 블록(마크다운)이 끊어지지 않도록 st.empty() 누적 렌더링 적용
 # ====================================================================================
 
 import streamlit as st
@@ -125,7 +126,6 @@ with st.sidebar:
     )
     
     st.title("📎 파일 첨부")
-    # [수정] file_uploader의 type에 'html', 'htm'을 추가하여 HTML 파일을 업로드할 수 있게 합니다.
     st.file_uploader(
         "이미지, PDF, HTML 파일:", type=['png', 'jpg', 'jpeg', 'gif', 'pdf', 'html', 'htm'], 
         accept_multiple_files=True, key="uploaded_files_sidebar"
@@ -256,13 +256,10 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                     content_parts.append(pdf_content)
                 except Exception as e:
                     st.error(f"PDF 파일 '{uploaded_file.name}' 처리 중 오류: {e}")
-            # [추가] HTML 파일 처리 로직
             elif uploaded_file.type == "text/html":
                 try:
-                    # 파일의 바이트 내용을 읽어 'utf-8'로 디코딩하여 문자열로 변환합니다.
                     html_bytes = uploaded_file.read()
                     html_code = html_bytes.decode('utf-8')
-                    # 모델이 HTML 코드임을 명확히 알 수 있도록 구분자를 추가하여 전달합니다.
                     html_content = f"--- HTML 코드 시작: {uploaded_file.name} ---\n\n{html_code}\n\n--- HTML 코드 끝 ---"
                     content_parts.append(html_content)
                 except Exception as e:
@@ -292,12 +289,22 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                 else:
                     response = chat.send_message(content_parts, stream=True)
                     response_text = ""
+                    
+                    # 💡 [핵심 수정 부분] st.empty()를 사용하여 컨테이너를 생성합니다.
+                    message_placeholder = st.empty() 
+                    
                     for chunk in response:
                         chunk_text = getattr(chunk, "text", None)
                         if chunk_text:
                             response_text += chunk_text
-                            st.markdown(chunk_text)
+                            # 💡 누적된 전체 텍스트를 마크다운으로 렌더링해야 코드 블록이 깨지지 않습니다!
+                            # ▌ 기호는 타이핑되는 듯한 효과(커서)를 줍니다.
+                            message_placeholder.markdown(response_text + "▌") 
+                            
                     response_text = response_text.strip()
+                    # 💡 스트리밍이 끝나면 커서를 지우고 최종 텍스트만 깔끔하게 렌더링합니다.
+                    message_placeholder.markdown(response_text) 
+                    
                     _, response_images = extract_response_parts(response)
 
                 if response_images:

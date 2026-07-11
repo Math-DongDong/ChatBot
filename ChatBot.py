@@ -130,9 +130,7 @@ with st.sidebar:
 
     # 안내 메시지 출력
     if is_free_model:
-        st.success("🟢 **3.1 플래시 라이트** 모델은 공통 키를 사용하므로 비밀번호 입력이 필요 없습니다.")
-    else:
-        st.info("🟣 **나노바나나 2** 모델은 선생님이 알려주신 비밀번호를 입력해야 합니다.")
+        st.success("🟢 **해당 모델** 은 키 입력이 필요 없습니다.")
     
     st.title("📜 System Instructions")
     st.text_area(

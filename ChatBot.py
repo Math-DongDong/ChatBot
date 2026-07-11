@@ -107,15 +107,6 @@ with st.sidebar:
     current_model = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
     is_free_model = (current_model == "Gemini 3.1 Flash Lite")
 
-    # 무료 모델이 아닐 때(나노바나나2)만 키 입력 에러/경고창 띄우기
-    if not is_free_model:
-        if not st.session_state.get("api_key_configured", False):
-            error_message = st.session_state.get("api_key_error_text")
-            if error_message: 
-                st.error(error_message)
-                st.warning("올바른 GEMINI 사용 키인지 확인해주세요.")
-            elif not st.session_state.get("gemini_api_key_input_sidebar", ""): 
-                st.warning("GEMINI 사용 키를 입력해주세요.")
         
     st.title("🔑 GEMINI 사용 키 설정")
 
@@ -135,7 +126,18 @@ with st.sidebar:
         on_change=auto_apply_api_key_on_change,
         disabled=is_free_model 
     )
-    
+
+    # 무료 모델이 아닐 때(나노바나나2)만 키 입력 에러/경고창 띄우기
+    if not is_free_model:
+        if not st.session_state.get("api_key_configured", False):
+            error_message = st.session_state.get("api_key_error_text")
+            if error_message: 
+                st.error(error_message)
+                st.warning("올바른 GEMINI 사용 키인지 확인해주세요.")
+            elif not st.session_state.get("gemini_api_key_input_sidebar", ""): 
+                st.warning("GEMINI 사용 키를 입력해주세요.")
+
+
     st.title("📜 System Instructions")
     st.text_area(
         "동동봇의 역할, 말투, 행동 방침을 자유롭게 지시하세요", 

@@ -6,12 +6,30 @@ import google.generativeai as genai
 from google.api_core import exceptions as google_exceptions
 from google.generativeai.types import IncompleteIterationError
 import io
+import sys
+from pathlib import Path
 from PIL import Image
 import fitz  # PyMuPDF
 
 # 💡 [추가] 브라우저 로컬 저장소 라이브러리 임포트
 from streamlit_local_storage import LocalStorage
-from chat_storage import delete_chat_history, sync_chat_history
+
+APP_ROOT = Path(__file__).resolve().parent
+if str(APP_ROOT) not in sys.path:
+    sys.path.insert(0, str(APP_ROOT))
+
+try:
+    from chat_storage import delete_chat_history, sync_chat_history
+except ModuleNotFoundError:
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("chat_storage", APP_ROOT / "chat_storage.py")
+    if spec is None or spec.loader is None:
+        raise
+    chat_storage = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(chat_storage)
+    delete_chat_history = chat_storage.delete_chat_history
+    sync_chat_history = chat_storage.sync_chat_history
 
 # --- 1. 페이지 기본 설정 ---
 st.set_page_config(

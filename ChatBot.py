@@ -39,14 +39,14 @@ def get_model_api_key(model_label):
         if validate_nano_banana_access_key(access_key):
             return st.secrets.get("api_keys", {}).get("nano_banana_paid_api_key")
         return None
-    if model_label == "Gemini 3.5 Flash Lite":
-        return get_secret_api_key("gemini_3_5_flash_lite")
+    if model_label == "Gemini 3.1 Flash Lite":
+        return get_secret_api_key("gemini_3_1_flash_lite")
     return None
 
-MODEL_OPTIONS = [ "Gemini 3.5 Flash Lite","Nano Banana"]
+MODEL_OPTIONS = ["Gemini 3.1 Flash Lite", "Nano Banana"]
 MODEL_NAME_MAP = {
     "Nano Banana": "gemini-2.5-flash-image",
-    "Gemini 3.5 Flash Lite": "gemini-3.5-flash-lite"
+    "Gemini 3.1 Flash Lite": "gemini-3.1-flash-lite"
 }
 
 # --- 2. 콜백 함수 정의 ---

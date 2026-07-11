@@ -1,11 +1,6 @@
 # ====================================================================================
-#  Gemini AI 챗봇 (Streamlit) - HTML 파일 처리 기능 추가 버전
+#  Gemini AI 챗봇 (Streamlit) - HTML 파일 처리 & 로컬 저장소(채팅 기록 유지) 추가 버전
 # ====================================================================================
-# 변경 사항:
-# - HTML 파일('text/html')을 업로드하고 텍스트로 읽어 모델에 전달하는 기능 추가
-# - [수정] 스트리밍 시 HTML 코드 블록(마크다운)이 끊어지지 않도록 st.empty() 누적 렌더링 적용
-# ====================================================================================
-
 import streamlit as st
 import google.generativeai as genai
 from google.api_core import exceptions as google_exceptions
@@ -16,6 +11,9 @@ import fitz  # PyMuPDF
 import toml
 import os
 
+# 💡 [추가] 브라우저 로컬 저장소 라이브러리 임포트
+from streamlit_local_storage import LocalStorage 
+
 # --- 1. 페이지 기본 설정 ---
 st.set_page_config(
     page_title="동동봇",
@@ -24,15 +22,13 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# 💡 [추가] 로컬 저장소 객체 생성
+localS = LocalStorage()
+
 # --- 1-1. Streamlit Secrets에서 API 키 로드 함수 ---
 def load_api_key_from_secrets(password):
-    """
-    Streamlit Secrets에서 비밀번호에 맞는 API 키를 조회합니다.
-    """
     try:
         db_credentials = st.secrets.get("db_credentials", {})
-        
-        # Password와 일치하는 항목 찾기
         if db_credentials.get("Password") == password:
             api_key = db_credentials.get("APIKEY")
             if api_key:
@@ -41,7 +37,6 @@ def load_api_key_from_secrets(password):
                 return None, "Secrets에 APIKEY가 없습니다."
         else:
             return None, "비밀번호가 일치하지 않습니다."
-    
     except Exception as e:
         return None, f"Secrets 읽기 중 오류: {e}"
 
@@ -67,7 +62,6 @@ def auto_apply_api_key_on_change():
             st.session_state.messages = []
         return
 
-    # Streamlit Secrets에서 API 키 로드
     api_key, error_msg = load_api_key_from_secrets(entered_password)
     
     if error_msg:
@@ -86,20 +80,17 @@ def auto_apply_api_key_on_change():
         st.session_state.api_key_configured = True
         st.session_state.current_api_key = api_key
         st.session_state.chat_session = None
-        st.session_state.messages = []
+        # 키 변경 시 기록 초기화 방지를 위해 메시지 초기화 부분 제거 (로컬 저장소 유지)
         st.toast("✅ API 키가 성공적으로 적용되었습니다! 새 대화를 시작합니다.")
     except Exception as e:
         st.session_state.api_key_configured = False
         st.session_state.current_api_key = None
         st.session_state.api_key_error_text = f"API 키 적용 중 오류 발생: {type(e).__name__} - {e}"
         st.session_state.chat_session = None
-        st.session_state.messages = []
-
 
 def reset_chat_session_on_model_change():
     st.session_state.chat_session = None
-    st.session_state.messages = []
-
+    # 모델 변경 시에도 기존 대화 내역은 유지하도록 messages 초기화 제거
 
 # --- 3. 사이드바 UI 구성 ---
 with st.sidebar:
@@ -131,6 +122,15 @@ with st.sidebar:
         accept_multiple_files=True, key="uploaded_files_sidebar"
     )
 
+    # 💡 [추가] 파일 첨부 아래에 '대화 기록 초기화' 버튼 생성
+    st.divider()
+    if st.button("🗑️ 대화 기록 초기화", type="primary", use_container_width=True):
+        st.session_state.messages = []
+        st.session_state.chat_session = None
+        localS.deleteItem("dongdong_chat_history") # 로컬 저장소 캐시 삭제
+        st.toast("✅ 대화 기록이 모두 초기화되었습니다.")
+        st.rerun()
+
 # --- 4. 챗봇 모델 및 세션 설정 ---
 MODEL_OPTIONS = ["Gemini 2.5 Flash", "Gemini 2.5 Pro", "Nano Banana"]
 MODEL_NAME_MAP = {
@@ -152,27 +152,21 @@ def stream_handler(response_stream):
         if getattr(chunk, "text", None):
             yield chunk.text
 
-
 def extract_response_parts(response):
     text_output = []
     image_outputs = []
-
     for candidate in getattr(response, "candidates", []) or []:
         content = getattr(candidate, "content", None)
         if content is None:
             continue
-
         for part in getattr(content, "parts", []) or []:
             part_text = getattr(part, "text", None)
             if part_text:
                 text_output.append(part_text)
-
             inline_data = getattr(part, "inline_data", None)
             if inline_data is not None and getattr(inline_data, "data", None):
                 image_outputs.append((inline_data.data, getattr(inline_data, "mime_type", "image/png")))
-
     return "\n".join(text_output).strip(), image_outputs
-
 
 def initialize_chat_session():
     if not st.session_state.get("api_key_configured", False):
@@ -189,6 +183,7 @@ def initialize_chat_session():
             model_name = MODEL_NAME_MAP.get(selected_model_label, MODEL_NAME_MAP[MODEL_OPTIONS[0]])
             model = genai.GenerativeModel(model_name, **model_kwargs)
             
+            # 기존 대화 내역이 있다면 Gemini 모델에 주입하여 기억하게 만듭니다.
             gemini_history = [
                 {"role": "model" if msg["role"] == "assistant" else msg["role"], 
                  "parts": [msg["content"]]}
@@ -204,6 +199,18 @@ def initialize_chat_session():
     
     return st.session_state.get("chat_session")
 
+
+# 💡 [추가] 앱 시작 시 로컬 저장소에서 대화 기록 불러오기
+if "messages" not in st.session_state:
+    saved_history = localS.getItem("dongdong_chat_history")
+    
+    # 로컬 저장소에 저장된 리스트가 존재하면 그대로 복구
+    if saved_history and isinstance(saved_history, list):
+        st.session_state.messages = saved_history
+    else:
+        st.session_state.messages = []
+
+
 # --- 5. 메인 채팅 인터페이스 ---
 col1, col2 = st.columns([4, 1])
 with col1:
@@ -216,9 +223,6 @@ with col2:
         help="Gemini 모델을 선택하세요.",
         on_change=reset_chat_session_on_model_change
     )
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
 
 chat = initialize_chat_session()
 
@@ -265,8 +269,11 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                 except Exception as e:
                     st.error(f"HTML 파일 '{uploaded_file.name}' 처리 중 오류: {e}")
 
-
+    # 유저의 메시지 저장
     st.session_state.messages.append({"role": "user", "content": prompt})
+    # 💡 [추가] 메시지가 추가될 때마다 로컬 저장소 덮어쓰기 (업데이트)
+    localS.setItem("dongdong_chat_history", st.session_state.messages)
+
     with st.chat_message("user"):
         st.markdown(prompt)
         if pil_images_for_display:
@@ -290,19 +297,15 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                     response = chat.send_message(content_parts, stream=True)
                     response_text = ""
                     
-                    # 💡 [핵심 수정 부분] st.empty()를 사용하여 컨테이너를 생성합니다.
                     message_placeholder = st.empty() 
                     
                     for chunk in response:
                         chunk_text = getattr(chunk, "text", None)
                         if chunk_text:
                             response_text += chunk_text
-                            # 💡 누적된 전체 텍스트를 마크다운으로 렌더링해야 코드 블록이 깨지지 않습니다!
-                            # ▌ 기호는 타이핑되는 듯한 효과(커서)를 줍니다.
                             message_placeholder.markdown(response_text + "▌") 
                             
                     response_text = response_text.strip()
-                    # 💡 스트리밍이 끝나면 커서를 지우고 최종 텍스트만 깔끔하게 렌더링합니다.
                     message_placeholder.markdown(response_text) 
                     
                     _, response_images = extract_response_parts(response)
@@ -317,7 +320,11 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                 assistant_content = response_text if response_text else (
                     "이미지 응답이 생성되었습니다." if response_images else "⚠️ 응답 없음"
                 )
+                
+                # 어시스턴트의 메시지 저장
                 st.session_state.messages.append({"role": "assistant", "content": assistant_content})
+                # 💡 [추가] 메시지가 추가될 때마다 로컬 저장소 덮어쓰기 (업데이트)
+                localS.setItem("dongdong_chat_history", st.session_state.messages)
 
             except (google_exceptions.GoogleAPIError, IncompleteIterationError, genai.types.BlockedPromptException, genai.types.StopCandidateException) as e:
                 error_message = f"오류 발생 ({type(e).__name__}): {e}"

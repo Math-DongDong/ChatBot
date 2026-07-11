@@ -1,6 +1,7 @@
 # ====================================================================================
-#  Gemini AI 챗봇 (Streamlit) - HTML 파일 처리 & 로컬 저장소(채팅 기록 유지) 추가 버전
+#  Gemini AI 챗봇 (Streamlit) - 모델별 API 키 입력 활성/비활성 처리
 # ====================================================================================
+
 import streamlit as st
 import google.generativeai as genai
 from google.api_core import exceptions as google_exceptions
@@ -8,9 +9,8 @@ from google.generativeai.types import IncompleteIterationError
 import io
 from PIL import Image
 import fitz  # PyMuPDF
-
-# 💡 [추가] 브라우저 로컬 저장소 라이브러리 임포트
-from streamlit_local_storage import LocalStorage
+import toml
+import os
 
 # --- 1. 페이지 기본 설정 ---
 st.set_page_config(
@@ -20,75 +20,30 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 💡 [추가] 로컬 저장소 객체 생성
-try:
-    localS = LocalStorage()
-except Exception:
-    localS = None
-
-CHAT_HISTORY_STORAGE_KEY = "dongdong_chat_history_v2"
-LEGACY_CHAT_HISTORY_STORAGE_KEYS = ["dongdong_chat_history"]
-
-
-def save_chat_history_to_storage():
-    if localS is None:
-        return
-    # 단순히 동일한 키로 덮어쓰도록 변경합니다 (streamlit_local_storage API 호환)
-    try:
-        st.session_state.chat_history_storage_key = st.session_state.get("chat_history_storage_key", 0) + 1
-        localS.setItem(CHAT_HISTORY_STORAGE_KEY, st.session_state.messages)
-    except Exception:
-        # 로컬 저장소 접근 오류는 무시
-        pass
-
-
-def clear_chat_history_from_storage():
-    if localS is None:
-        return
-    # 명시한 키들을 삭제하고 빈 배열로 덮어씁니다
-    try:
-        for storage_key in [CHAT_HISTORY_STORAGE_KEY, *LEGACY_CHAT_HISTORY_STORAGE_KEYS]:
-            try:
-                localS.deleteItem(storage_key)
-            except Exception:
-                pass
-
-        # 안전하게 빈 리스트로 덮어쓰기
-        try:
-            localS.setItem(CHAT_HISTORY_STORAGE_KEY, [])
-        except Exception:
-            pass
-    except Exception:
-        pass
-
-# --- 1-1. Streamlit Secrets에서 API 키 로드 함수 ---
-def get_secret_api_key(key_name):
-    return st.secrets.get("api_keys", {}).get(key_name)
-
-def validate_nano_banana_2_access_key(access_key):
-    expected = st.secrets.get("api_keys", {}).get("nano_banana_2_access_key")
-    if not expected or not access_key:
-        return False
-    return str(access_key).strip() == str(expected).strip()
-
-def get_model_api_key(model_label):
-    if model_label == "Nano Banana 2":
-        access_key = (
-            st.session_state.get("nano_banana_2_access_key_input", "")
-            or st.session_state.get("nano_banana_access_key_input", "")
-        )
-        if validate_nano_banana_2_access_key(access_key):
-            return st.secrets.get("api_keys", {}).get("nano_banana_2_paid_api_key")
-        return None
-    if model_label == "Gemini 3.1 Flash Lite":
-        return get_secret_api_key("gemini_3_1_flash_lite")
-    return None
-
+# 💡 [수정됨] 선생님이 요청하신 모델 이름으로 변경
 MODEL_OPTIONS = ["Gemini 3.1 Flash Lite", "Nano Banana 2"]
 MODEL_NAME_MAP = {
-    "Nano Banana 2": "gemini-3.1-flash-image",
-    "Gemini 3.1 Flash Lite": "gemini-3.1-flash-lite"
+    "Gemini 3.1 Flash Lite": "gemini-3.1-flash-lite",    # 무료/기본 모델 연결
+    "Nano Banana 2": "gemini-3.1-flash-image"            # 고급/유료 모델 연결
 }
+
+if "selected_gemini_model" not in st.session_state:
+    st.session_state.selected_gemini_model = MODEL_OPTIONS[0]
+
+# --- 1-1. Streamlit Secrets에서 API 키 로드 함수 ---
+def load_api_key_from_secrets(password):
+    try:
+        db_credentials = st.secrets.get("db_credentials", {})
+        if db_credentials.get("Password") == password:
+            api_key = db_credentials.get("APIKEY")
+            if api_key:
+                return api_key, None
+            else:
+                return None, "Secrets에 APIKEY가 없습니다."
+        else:
+            return None, "비밀번호가 일치하지 않습니다."
+    except Exception as e:
+        return None, f"Secrets 읽기 중 오류: {e}"
 
 # --- 2. 콜백 함수 정의 ---
 def auto_apply_system_instructions_on_change():
@@ -100,31 +55,85 @@ def auto_apply_system_instructions_on_change():
     else:
         st.toast("ℹ️ System Instructions가 초기화되었습니다.")
 
+def auto_apply_api_key_on_change():
+    entered_password = st.session_state.get("gemini_api_key_input_sidebar", "")
+    st.session_state.api_key_error_text = None
+    
+    if not entered_password:
+        if st.session_state.get("api_key_configured", False) or st.session_state.get("current_api_key"):
+            st.session_state.api_key_configured = False
+            st.session_state.current_api_key = None
+            st.session_state.chat_session = None
+            st.session_state.messages = []
+        return
+
+    api_key, error_msg = load_api_key_from_secrets(entered_password)
+    
+    if error_msg:
+        st.session_state.api_key_configured = False
+        st.session_state.current_api_key = None
+        st.session_state.api_key_error_text = error_msg
+        st.session_state.chat_session = None
+        st.session_state.messages = []
+        return
+    
+    if st.session_state.get("api_key_configured", False) and st.session_state.get("current_api_key") == api_key:
+        return
+
+    try:
+        genai.configure(api_key=api_key)
+        st.session_state.api_key_configured = True
+        st.session_state.current_api_key = api_key
+        st.session_state.chat_session = None
+        st.session_state.messages = []
+        st.toast("✅ API 키가 성공적으로 적용되었습니다! 새 대화를 시작합니다.")
+    except Exception as e:
+        st.session_state.api_key_configured = False
+        st.session_state.current_api_key = None
+        st.session_state.api_key_error_text = f"API 키 적용 중 오류 발생: {type(e).__name__} - {e}"
+        st.session_state.chat_session = None
+        st.session_state.messages = []
+
 def reset_chat_session_on_model_change():
     st.session_state.chat_session = None
-    # 모델 변경 시에도 기존 대화 내역은 유지하도록 messages 초기화 제거
+    st.session_state.messages = []
+    # 💡 유료 모델에서 무료 모델로 바꿀 때 텍스트 박스를 비워주어 혼란 방지
+    if st.session_state.selected_gemini_model == "Gemini 3.1 Flash Lite":
+        st.session_state.api_key_error_text = None
 
 # --- 3. 사이드바 UI 구성 ---
 with st.sidebar:
-    selected_model = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
-    if selected_model == "Nano Banana 2":
-        st.title("🔑 사용 키 설정")
-        st.text_input(
-            "Nano Banana 2  사용 키", 
-            type="password",
-            help="선생님이 알려준 사용 키를 입력하세요.",
-            label_visibility="visible",
-            key="nano_banana_2_access_key_input",
-            on_change=reset_chat_session_on_model_change,
-        )
+    # 💡 [핵심 수정] 현재 선택된 모델이 무료(3.1 Flash)인지 확인
+    current_model = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
+    is_free_model = (current_model == "Gemini 3.1 Flash Lite")
 
-        access_key = st.session_state.get("nano_banana_2_access_key_input", "") or st.session_state.get("nano_banana_access_key_input", "")
-        if access_key:
-            if validate_nano_banana_2_access_key(access_key):
-                secret_key = get_model_api_key(selected_model)
-            else:
-                st.error("사용 키가 일치하지 않습니다.")
+    # 무료 모델이 아닐 때(나노바나나2)만 키 입력 에러/경고창 띄우기
+    if not is_free_model:
+        if not st.session_state.get("api_key_configured", False):
+            error_message = st.session_state.get("api_key_error_text")
+            if error_message: 
+                st.error(error_message)
+                st.warning("올바른 GEMINI 사용 키인지 확인해주세요.")
+            elif not st.session_state.get("gemini_api_key_input_sidebar", ""): 
+                st.warning("GEMINI 사용 키를 입력해주세요.")
+        
+    st.title("🔑 GEMINI 사용 키 설정")
+    
+    # 💡 [핵심 수정] disabled=is_free_model 옵션으로 모델에 따라 창을 잠금 처리합니다.
+    st.text_input(
+        "Key:", type="password", placeholder="GEMINI 사용 키를 입력하세요.", 
+        help="선생님께서 알려주는 GEMINI 사용 키를 입력해주세요.", 
+        key="gemini_api_key_input_sidebar", 
+        on_change=auto_apply_api_key_on_change,
+        disabled=is_free_model 
+    )
 
+    # 안내 메시지 출력
+    if is_free_model:
+        st.success("🟢 **3.1 플래시 라이트** 모델은 공통 키를 사용하므로 비밀번호 입력이 필요 없습니다.")
+    else:
+        st.info("🟣 **나노바나나 2** 모델은 선생님이 알려주신 비밀번호를 입력해야 합니다.")
+    
     st.title("📜 System Instructions")
     st.text_area(
         "동동봇의 역할, 말투, 행동 방침을 자유롭게 지시하세요", 
@@ -138,49 +147,42 @@ with st.sidebar:
         accept_multiple_files=True, key="uploaded_files_sidebar"
     )
 
-    # 💡 [추가] 파일 첨부 아래에 '대화 기록 초기화' 버튼 생성
-    st.divider()
-    if st.button("🗑️ 대화 기록 초기화", type="primary", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.chat_session = None
-        st.session_state.chat_history_storage_key = 0
-        clear_chat_history_from_storage()
-        st.toast("✅ 대화 기록이 모두 초기화되었습니다.")
-        st.rerun()
-
-
+# --- 4. 챗봇 세션 설정 ---
 SAFETY_SETTINGS_NONE = {
     'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',
     'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'
 }
-
-def stream_handler(response_stream):
-    for chunk in response_stream:
-        if getattr(chunk, "text", None):
-            yield chunk.text
 
 def extract_response_parts(response):
     text_output = []
     image_outputs = []
     for candidate in getattr(response, "candidates", []) or []:
         content = getattr(candidate, "content", None)
-        if content is None:
-            continue
+        if content is None: continue
         for part in getattr(content, "parts", []) or []:
-            try:
-                part_text = getattr(part, "text", None)
-            except (AttributeError, ValueError):
-                part_text = None
-
-            if part_text:
-                text_output.append(part_text)
-
+            part_text = getattr(part, "text", None)
+            if part_text: text_output.append(part_text)
             inline_data = getattr(part, "inline_data", None)
             if inline_data is not None and getattr(inline_data, "data", None):
                 image_outputs.append((inline_data.data, getattr(inline_data, "mime_type", "image/png")))
     return "\n".join(text_output).strip(), image_outputs
 
 def initialize_chat_session():
+    selected_model_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
+    is_free_model = (selected_model_label == "Gemini 3.1 Flash Lite")
+
+    # 💡 [핵심 수정] 무료 모델일 때는 secrets의 default_api_key를 강제로 먹입니다.
+    if is_free_model:
+        default_key = st.secrets.get("default_api_key")
+        if not default_key:
+            st.error("⚠️ 서버(secrets.toml)에 무료 모델을 위한 'default_api_key'가 설정되지 않았습니다.")
+            return None
+        genai.configure(api_key=default_key)
+    else:
+        # 유료 모델(나노바나나2)일 때는 사이드바에서 입력한 키가 설정되었는지 확인
+        if not st.session_state.get("api_key_configured", False):
+            return None
+    
     if "chat_session" not in st.session_state or st.session_state.chat_session is None:
         try:
             system_instructions = st.session_state.get("system_instructions", "")
@@ -188,17 +190,9 @@ def initialize_chat_session():
             if system_instructions and system_instructions.strip():
                 model_kwargs["system_instruction"] = system_instructions
             
-            selected_model_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
-            api_key = get_model_api_key(selected_model_label)
-            if not api_key:
-                st.error(f"{selected_model_label}의 사용 키를 먼저 입력하세요.")
-                return None
-
-            genai.configure(api_key=api_key)
             model_name = MODEL_NAME_MAP.get(selected_model_label, MODEL_NAME_MAP[MODEL_OPTIONS[0]])
             model = genai.GenerativeModel(model_name, **model_kwargs)
             
-            # 기존 대화 내역이 있다면 Gemini 모델에 주입하여 기억하게 만듭니다.
             gemini_history = [
                 {"role": "model" if msg["role"] == "assistant" else msg["role"], 
                  "parts": [msg["content"]]}
@@ -214,30 +208,6 @@ def initialize_chat_session():
     
     return st.session_state.get("chat_session")
 
-
-# 💡 [추가] 앱 시작 시 로컬 저장소에서 대화 기록 불러오기
-if "messages" not in st.session_state:
-    saved_history = None
-    if localS is None:
-        st.session_state.messages = []
-    else:
-        for storage_key in [CHAT_HISTORY_STORAGE_KEY, *LEGACY_CHAT_HISTORY_STORAGE_KEYS]:
-            candidate_history = localS.getItem(storage_key)
-            if candidate_history and isinstance(candidate_history, list):
-                saved_history = candidate_history
-                break
-
-    # 로컬 저장소에 저장된 리스트가 존재하면 그대로 복구
-    if saved_history is not None and isinstance(saved_history, list):
-        st.session_state.messages = saved_history
-    else:
-        st.session_state.messages = []
-
-    # 초기화 직후 세션이 남아 있던 경우를 방지하기 위해 빈 배열로 고정
-    if "chat_history_storage_key" not in st.session_state:
-        st.session_state.chat_history_storage_key = 0
-
-
 # --- 5. 메인 채팅 인터페이스 ---
 col1, col2 = st.columns([4, 1])
 with col1:
@@ -251,6 +221,9 @@ with col2:
         on_change=reset_chat_session_on_model_change
     )
 
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
 chat = initialize_chat_session()
 
 for message in st.session_state.messages:
@@ -258,8 +231,10 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바꿈)"):
+    # 에러 메시지 분리 (무료 모델 vs 유료 모델)
     if not chat:
-        st.error("⚠️ GEMINI 사용 키가 설정되지 않았습니다. 사이드바에서 사용 키를 먼저 적용해주세요.")
+        if st.session_state.selected_gemini_model == "Nano Banana 2":
+            st.error("⚠️ 나노바나나 2를 사용하려면 사이드바에 비밀번호를 먼저 입력해주세요.")
         st.stop()
 
     content_parts = [prompt]
@@ -296,11 +271,8 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                 except Exception as e:
                     st.error(f"HTML 파일 '{uploaded_file.name}' 처리 중 오류: {e}")
 
-    # 유저의 메시지 저장
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    # 💡 [추가] 메시지가 추가될 때마다 로컬 저장소 덮어쓰기 (업데이트)
-    save_chat_history_to_storage()
 
+    st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
         if pil_images_for_display:
@@ -313,10 +285,8 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
         with st.spinner("동동봇 생각 중... 🤔",show_time=True):
             try:
                 selected_model_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
-                is_image_model = selected_model_label in {"Nano Banana", "Nano Banana 2"}
-
-                response_text = ""
-                response_images = []
+                # 💡 나노바나나2 인지 확인
+                is_image_model = selected_model_label == "Nano Banana 2"
 
                 if is_image_model:
                     response = chat.send_message(content_parts, stream=False)
@@ -325,32 +295,32 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                         st.markdown(response_text)
                 else:
                     response = chat.send_message(content_parts, stream=True)
-
-                    message_placeholder = st.empty()
-
-                    try:
-                        for chunk in response:
-                            chunk_text = getattr(chunk, "text", None)
-                            if chunk_text:
-                                response_text += chunk_text
-                                message_placeholder.markdown(response_text + "▌")
-
-                        response_text = response_text.strip()
-                        message_placeholder.markdown(response_text)
-                    except IncompleteIterationError:
-                        response_text = response_text.strip()
-                        message_placeholder.markdown(response_text or "응답이 아직 완성되지 않았습니다. 잠시 후 다시 시도해 주세요.")
-
+                    response_text = ""
+                    
+                    message_placeholder = st.empty() 
+                    
+                    for chunk in response:
+                        chunk_text = getattr(chunk, "text", None)
+                        if chunk_text:
+                            response_text += chunk_text
+                            message_placeholder.markdown(response_text + "▌") 
+                            
+                    response_text = response_text.strip()
+                    message_placeholder.markdown(response_text) 
+                    
                     _, response_images = extract_response_parts(response)
+
+                if response_images:
+                    for image_bytes, mime_type in response_images:
+                        try:
+                            st.image(Image.open(io.BytesIO(image_bytes)), use_container_width=True)
+                        except Exception:
+                            st.warning("이미지 응답을 표시하는 중 문제가 발생했습니다.")
 
                 assistant_content = response_text if response_text else (
                     "이미지 응답이 생성되었습니다." if response_images else "⚠️ 응답 없음"
                 )
-                
-                # 어시스턴트의 메시지 저장
                 st.session_state.messages.append({"role": "assistant", "content": assistant_content})
-                # 💡 [추가] 메시지가 추가될 때마다 로컬 저장소 덮어쓰기 (업데이트)
-                save_chat_history_to_storage()
 
             except (google_exceptions.GoogleAPIError, IncompleteIterationError, genai.types.BlockedPromptException, genai.types.StopCandidateException) as e:
                 error_message = f"오류 발생 ({type(e).__name__}): {e}"

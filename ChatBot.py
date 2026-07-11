@@ -57,11 +57,14 @@ def validate_nano_banana_2_access_key(access_key):
     expected = st.secrets.get("api_keys", {}).get("nano_banana_2_access_key")
     if not expected or not access_key:
         return False
-    return access_key.strip() == expected.strip()
+    return str(access_key).strip() == str(expected).strip()
 
 def get_model_api_key(model_label):
     if model_label == "Nano Banana 2":
-        access_key = st.session_state.get("nano_banana_2_access_key_input", "")
+        access_key = (
+            st.session_state.get("nano_banana_2_access_key_input", "")
+            or st.session_state.get("nano_banana_access_key_input", "")
+        )
         if validate_nano_banana_2_access_key(access_key):
             return st.secrets.get("api_keys", {}).get("nano_banana_2_paid_api_key")
         return None
@@ -99,11 +102,11 @@ with st.sidebar:
             type="password",
             help="선생님이 알려준 사용 키를 입력하세요.",
             label_visibility="visible",
-            key="nano_banana_access_key_input",
+            key="nano_banana_2_access_key_input",
             on_change=reset_chat_session_on_model_change,
         )
 
-        access_key = st.session_state.get("nano_banana_2_access_key_input", "")
+        access_key = st.session_state.get("nano_banana_2_access_key_input", "") or st.session_state.get("nano_banana_access_key_input", "")
         if access_key:
             if validate_nano_banana_2_access_key(access_key):
                 secret_key = get_model_api_key(selected_model)

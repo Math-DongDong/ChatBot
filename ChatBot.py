@@ -132,7 +132,6 @@ with st.sidebar:
         if not st.session_state.get("api_key_configured", False):
             error_message = st.session_state.get("api_key_error_text")
             if error_message: 
-                st.error(error_message)
                 st.warning("올바른 GEMINI 사용 키인지 확인해주세요.")
             elif not st.session_state.get("gemini_api_key_input_sidebar", ""): 
                 st.warning("GEMINI 사용 키를 입력해주세요.")

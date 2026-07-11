@@ -128,6 +128,7 @@ with st.sidebar:
     if st.button("🗑️ 대화 기록 초기화", type="primary", use_container_width=True):
         st.session_state.messages = []
         st.session_state.chat_session = None
+        st.session_state.chat_history_storage_key = 0
         clear_chat_history_from_storage()
         st.toast("✅ 대화 기록이 모두 초기화되었습니다.")
         st.rerun()
@@ -208,6 +209,10 @@ if "messages" not in st.session_state:
         st.session_state.messages = saved_history
     else:
         st.session_state.messages = []
+
+    # 초기화 직후 세션이 남아 있던 경우를 방지하기 위해 빈 배열로 고정
+    if "chat_history_storage_key" not in st.session_state:
+        st.session_state.chat_history_storage_key = 0
 
 
 # --- 5. 메인 채팅 인터페이스 ---

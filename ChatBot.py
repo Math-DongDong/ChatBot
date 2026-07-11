@@ -33,30 +33,33 @@ LEGACY_CHAT_HISTORY_STORAGE_KEYS = ["dongdong_chat_history"]
 def save_chat_history_to_storage():
     if localS is None:
         return
-    next_storage_key = st.session_state.get("chat_history_storage_key", 0) + 1
-    st.session_state.chat_history_storage_key = next_storage_key
-    localS.setItem(
-        CHAT_HISTORY_STORAGE_KEY,
-        st.session_state.messages,
-        key=f"chat_history_set_{next_storage_key}",
-    )
+    # 단순히 동일한 키로 덮어쓰도록 변경합니다 (streamlit_local_storage API 호환)
+    try:
+        st.session_state.chat_history_storage_key = st.session_state.get("chat_history_storage_key", 0) + 1
+        localS.setItem(CHAT_HISTORY_STORAGE_KEY, st.session_state.messages)
+    except Exception:
+        # 로컬 저장소 접근 오류는 무시
+        pass
 
 
 def clear_chat_history_from_storage():
     if localS is None:
         return
+    # 명시한 키들을 삭제하고 빈 배열로 덮어씁니다
+    try:
+        for storage_key in [CHAT_HISTORY_STORAGE_KEY, *LEGACY_CHAT_HISTORY_STORAGE_KEYS]:
+            try:
+                localS.deleteItem(storage_key)
+            except Exception:
+                pass
 
-    for storage_key in [CHAT_HISTORY_STORAGE_KEY, *LEGACY_CHAT_HISTORY_STORAGE_KEYS]:
+        # 안전하게 빈 리스트로 덮어쓰기
         try:
-            localS.deleteItem(storage_key, key=f"chat_history_delete_{storage_key}")
+            localS.setItem(CHAT_HISTORY_STORAGE_KEY, [])
         except Exception:
             pass
-
-    localS.setItem(
-        CHAT_HISTORY_STORAGE_KEY,
-        [],
-        key="chat_history_reset_empty",
-    )
+    except Exception:
+        pass
 
 # --- 1-1. Streamlit Secrets에서 API 키 로드 함수 ---
 def get_secret_api_key(key_name):

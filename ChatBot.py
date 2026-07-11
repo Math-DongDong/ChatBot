@@ -10,7 +10,8 @@ from PIL import Image
 import fitz  # PyMuPDF
 
 # 💡 [추가] 브라우저 로컬 저장소 라이브러리 임포트
-from streamlit_local_storage import LocalStorage 
+from streamlit_local_storage import LocalStorage
+from chat_storage import delete_chat_history, sync_chat_history
 
 # --- 1. 페이지 기본 설정 ---
 st.set_page_config(
@@ -23,29 +24,48 @@ st.set_page_config(
 # 💡 [추가] 로컬 저장소 객체 생성
 localS = LocalStorage()
 
+
+def save_chat_history_to_storage():
+    next_storage_key = st.session_state.get("chat_history_storage_key", 0) + 1
+    st.session_state.chat_history_storage_key = next_storage_key
+    sync_chat_history(
+        localS,
+        "dongdong_chat_history",
+        st.session_state.messages,
+        unique_key=f"chat_history_set_{next_storage_key}",
+    )
+
+
+def clear_chat_history_from_storage():
+    delete_chat_history(
+        localS,
+        "dongdong_chat_history",
+        unique_key="chat_history_clear",
+    )
+
 # --- 1-1. Streamlit Secrets에서 API 키 로드 함수 ---
 def get_secret_api_key(key_name):
     return st.secrets.get("api_keys", {}).get(key_name)
 
-def validate_nano_banana_access_key(access_key):
-    expected = st.secrets.get("api_keys", {}).get("nano_banana_access_key")
+def validate_nano_banana_2_access_key(access_key):
+    expected = st.secrets.get("api_keys", {}).get("nano_banana_2_access_key")
     if not expected or not access_key:
         return False
     return access_key.strip() == expected.strip()
 
 def get_model_api_key(model_label):
-    if model_label == "Nano Banana":
-        access_key = st.session_state.get("nano_banana_access_key_input", "")
-        if validate_nano_banana_access_key(access_key):
-            return st.secrets.get("api_keys", {}).get("nano_banana_paid_api_key")
+    if model_label == "Nano Banana 2":
+        access_key = st.session_state.get("nano_banana_2_access_key_input", "")
+        if validate_nano_banana_2_access_key(access_key):
+            return st.secrets.get("api_keys", {}).get("nano_banana_2_paid_api_key")
         return None
     if model_label == "Gemini 3.1 Flash Lite":
         return get_secret_api_key("gemini_3_1_flash_lite")
     return None
 
-MODEL_OPTIONS = ["Gemini 3.1 Flash Lite", "Nano Banana"]
+MODEL_OPTIONS = ["Gemini 3.1 Flash Lite", "Nano Banana 2"]
 MODEL_NAME_MAP = {
-    "Nano Banana": "gemini-2.5-flash-image",
+    "Nano Banana 2": "gemini-3.1-flash-image",
     "Gemini 3.1 Flash Lite": "gemini-3.1-flash-lite"
 }
 
@@ -66,24 +86,24 @@ def reset_chat_session_on_model_change():
 # --- 3. 사이드바 UI 구성 ---
 with st.sidebar:
     selected_model = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
-    if selected_model == "Nano Banana":
-        st.title("🔑 Nano Banana 사용 키 설정")
+    if selected_model == "Nano Banana 2":
+        st.title("🔑 Nano Banana 2 사용 키 설정")
         st.text_input(
-            "Nano Banana 사용 키", 
+            "Nano Banana 2  사용 키", 
             type="password",
             placeholder="선생님이 알려준 사용 키를 입력하세요.",
             key="nano_banana_access_key_input",
             on_change=reset_chat_session_on_model_change,
         )
 
-        access_key = st.session_state.get("nano_banana_access_key_input", "")
+        access_key = st.session_state.get("nano_banana_2_access_key_input", "")
         if access_key:
-            if validate_nano_banana_access_key(access_key):
+            if validate_nano_banana_2_access_key(access_key):
                 secret_key = get_model_api_key(selected_model)
             else:
-                st.error("Nano Banana 사용 키가 일치하지 않습니다.")
+                st.error("Nano Banana 2 사용 키가 일치하지 않습니다.")
         else:
-            st.info("Nano Banana를 사용할 때는 사용 키를 입력해야 합니다.")
+            st.info("Nano Banana 2 를 사용할 때는 사용 키를 입력해야 합니다.")
 
     st.title("📜 System Instructions")
     st.text_area(
@@ -103,7 +123,7 @@ with st.sidebar:
     if st.button("🗑️ 대화 기록 초기화", type="primary", use_container_width=True):
         st.session_state.messages = []
         st.session_state.chat_session = None
-        localS.deleteItem("dongdong_chat_history") # 로컬 저장소 캐시 삭제
+        clear_chat_history_from_storage()
         st.toast("✅ 대화 기록이 모두 초기화되었습니다.")
         st.rerun()
 
@@ -241,7 +261,7 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
     # 유저의 메시지 저장
     st.session_state.messages.append({"role": "user", "content": prompt})
     # 💡 [추가] 메시지가 추가될 때마다 로컬 저장소 덮어쓰기 (업데이트)
-    localS.setItem("dongdong_chat_history", st.session_state.messages)
+    save_chat_history_to_storage()
 
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -293,7 +313,7 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                 # 어시스턴트의 메시지 저장
                 st.session_state.messages.append({"role": "assistant", "content": assistant_content})
                 # 💡 [추가] 메시지가 추가될 때마다 로컬 저장소 덮어쓰기 (업데이트)
-                localS.setItem("dongdong_chat_history", st.session_state.messages)
+                save_chat_history_to_storage()
 
             except (google_exceptions.GoogleAPIError, IncompleteIterationError, genai.types.BlockedPromptException, genai.types.StopCandidateException) as e:
                 error_message = f"오류 발생 ({type(e).__name__}): {e}"

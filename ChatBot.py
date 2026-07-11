@@ -22,22 +22,31 @@ st.set_page_config(
 
 # 💡 [추가] 로컬 저장소 객체 생성
 localS = LocalStorage()
+CHAT_HISTORY_STORAGE_KEY = "dongdong_chat_history_v2"
+LEGACY_CHAT_HISTORY_STORAGE_KEYS = ["dongdong_chat_history"]
 
 
 def save_chat_history_to_storage():
     next_storage_key = st.session_state.get("chat_history_storage_key", 0) + 1
     st.session_state.chat_history_storage_key = next_storage_key
     localS.setItem(
-        "dongdong_chat_history",
+        CHAT_HISTORY_STORAGE_KEY,
         st.session_state.messages,
         key=f"chat_history_set_{next_storage_key}",
     )
 
 
 def clear_chat_history_from_storage():
-    localS.deleteItem(
-        "dongdong_chat_history",
-        key="chat_history_clear",
+    for storage_key in [CHAT_HISTORY_STORAGE_KEY, *LEGACY_CHAT_HISTORY_STORAGE_KEYS]:
+        try:
+            localS.deleteItem(storage_key, key=f"chat_history_delete_{storage_key}")
+        except Exception:
+            pass
+
+    localS.setItem(
+        CHAT_HISTORY_STORAGE_KEY,
+        [],
+        key="chat_history_reset_empty",
     )
 
 # --- 1-1. Streamlit Secrets에서 API 키 로드 함수 ---
@@ -100,8 +109,6 @@ with st.sidebar:
                 secret_key = get_model_api_key(selected_model)
             else:
                 st.error("사용 키가 일치하지 않습니다.")
-        else:
-            st.info("Nano Banana 2 를 사용할 때는 사용 키를 입력해야 합니다.")
 
     st.title("📜 System Instructions")
     st.text_area(
@@ -163,7 +170,7 @@ def initialize_chat_session():
             selected_model_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
             api_key = get_model_api_key(selected_model_label)
             if not api_key:
-                st.error(f"선택된 모델({selected_model_label})의 API 키가 설정되지 않았습니다.")
+                st.error(f"{selected_model_label}의 사용 키를 먼저 입력하세요.")
                 return None
 
             genai.configure(api_key=api_key)
@@ -189,10 +196,15 @@ def initialize_chat_session():
 
 # 💡 [추가] 앱 시작 시 로컬 저장소에서 대화 기록 불러오기
 if "messages" not in st.session_state:
-    saved_history = localS.getItem("dongdong_chat_history")
-    
+    saved_history = None
+    for storage_key in [CHAT_HISTORY_STORAGE_KEY, *LEGACY_CHAT_HISTORY_STORAGE_KEYS]:
+        candidate_history = localS.getItem(storage_key)
+        if candidate_history and isinstance(candidate_history, list):
+            saved_history = candidate_history
+            break
+
     # 로컬 저장소에 저장된 리스트가 존재하면 그대로 복구
-    if saved_history and isinstance(saved_history, list):
+    if saved_history is not None and isinstance(saved_history, list):
         st.session_state.messages = saved_history
     else:
         st.session_state.messages = []

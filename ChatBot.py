@@ -118,19 +118,23 @@ with st.sidebar:
                 st.warning("GEMINI 사용 키를 입력해주세요.")
         
     st.title("🔑 GEMINI 사용 키 설정")
-    
+
+    # 안내 메시지 설정
+    if is_free_model:
+        holder="입력란 비활성화"
+        tooltip="해당 모델은 GEMINI 사용 키를 입력이 필요 없습니다."
+    else:
+        holder="GEMINI 사용 키를 입력하세요."
+        tooltip="선생님께서 알려주는 GEMINI 사용 키를 입력해주세요."
+
     # 💡 [핵심 수정] disabled=is_free_model 옵션으로 모델에 따라 창을 잠금 처리합니다.
     st.text_input(
-        "Key:", type="password", placeholder="GEMINI 사용 키를 입력하세요.", 
-        help="선생님께서 알려주는 GEMINI 사용 키를 입력해주세요.", 
+        "Key:", type="password", placeholder=holder, 
+        help=tooltip, 
         key="gemini_api_key_input_sidebar", 
         on_change=auto_apply_api_key_on_change,
         disabled=is_free_model 
     )
-
-    # 안내 메시지 출력
-    if is_free_model:
-        st.success("🟢 **해당 모델** 은 키 입력이 필요 없습니다.")
     
     st.title("📜 System Instructions")
     st.text_area(

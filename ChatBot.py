@@ -6,30 +6,11 @@ import google.generativeai as genai
 from google.api_core import exceptions as google_exceptions
 from google.generativeai.types import IncompleteIterationError
 import io
-import sys
-from pathlib import Path
 from PIL import Image
 import fitz  # PyMuPDF
 
 # 💡 [추가] 브라우저 로컬 저장소 라이브러리 임포트
 from streamlit_local_storage import LocalStorage
-
-APP_ROOT = Path(__file__).resolve().parent
-if str(APP_ROOT) not in sys.path:
-    sys.path.insert(0, str(APP_ROOT))
-
-try:
-    from chat_storage import delete_chat_history, sync_chat_history
-except ModuleNotFoundError:
-    import importlib.util
-
-    spec = importlib.util.spec_from_file_location("chat_storage", APP_ROOT / "chat_storage.py")
-    if spec is None or spec.loader is None:
-        raise
-    chat_storage = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(chat_storage)
-    delete_chat_history = chat_storage.delete_chat_history
-    sync_chat_history = chat_storage.sync_chat_history
 
 # --- 1. 페이지 기본 설정 ---
 st.set_page_config(
@@ -46,19 +27,17 @@ localS = LocalStorage()
 def save_chat_history_to_storage():
     next_storage_key = st.session_state.get("chat_history_storage_key", 0) + 1
     st.session_state.chat_history_storage_key = next_storage_key
-    sync_chat_history(
-        localS,
+    localS.setItem(
         "dongdong_chat_history",
         st.session_state.messages,
-        unique_key=f"chat_history_set_{next_storage_key}",
+        key=f"chat_history_set_{next_storage_key}",
     )
 
 
 def clear_chat_history_from_storage():
-    delete_chat_history(
-        localS,
+    localS.deleteItem(
         "dongdong_chat_history",
-        unique_key="chat_history_clear",
+        key="chat_history_clear",
     )
 
 # --- 1-1. Streamlit Secrets에서 API 키 로드 함수 ---
@@ -105,11 +84,12 @@ def reset_chat_session_on_model_change():
 with st.sidebar:
     selected_model = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
     if selected_model == "Nano Banana 2":
-        st.title("🔑 Nano Banana 2 사용 키 설정")
+        st.title("🔑 사용 키 설정")
         st.text_input(
             "Nano Banana 2  사용 키", 
             type="password",
-            placeholder="선생님이 알려준 사용 키를 입력하세요.",
+            help="선생님이 알려준 사용 키를 입력하세요.",
+            label_visibility="collapsed",
             key="nano_banana_access_key_input",
             on_change=reset_chat_session_on_model_change,
         )
@@ -119,7 +99,7 @@ with st.sidebar:
             if validate_nano_banana_2_access_key(access_key):
                 secret_key = get_model_api_key(selected_model)
             else:
-                st.error("Nano Banana 2 사용 키가 일치하지 않습니다.")
+                st.error("사용 키가 일치하지 않습니다.")
         else:
             st.info("Nano Banana 2 를 사용할 때는 사용 키를 입력해야 합니다.")
 

@@ -21,12 +21,18 @@ st.set_page_config(
 )
 
 # 💡 [추가] 로컬 저장소 객체 생성
-localS = LocalStorage()
+try:
+    localS = LocalStorage()
+except Exception:
+    localS = None
+
 CHAT_HISTORY_STORAGE_KEY = "dongdong_chat_history_v2"
 LEGACY_CHAT_HISTORY_STORAGE_KEYS = ["dongdong_chat_history"]
 
 
 def save_chat_history_to_storage():
+    if localS is None:
+        return
     next_storage_key = st.session_state.get("chat_history_storage_key", 0) + 1
     st.session_state.chat_history_storage_key = next_storage_key
     localS.setItem(
@@ -37,6 +43,9 @@ def save_chat_history_to_storage():
 
 
 def clear_chat_history_from_storage():
+    if localS is None:
+        return
+
     for storage_key in [CHAT_HISTORY_STORAGE_KEY, *LEGACY_CHAT_HISTORY_STORAGE_KEYS]:
         try:
             localS.deleteItem(storage_key, key=f"chat_history_delete_{storage_key}")
@@ -155,9 +164,14 @@ def extract_response_parts(response):
         if content is None:
             continue
         for part in getattr(content, "parts", []) or []:
-            part_text = getattr(part, "text", None)
+            try:
+                part_text = getattr(part, "text", None)
+            except (AttributeError, ValueError):
+                part_text = None
+
             if part_text:
                 text_output.append(part_text)
+
             inline_data = getattr(part, "inline_data", None)
             if inline_data is not None and getattr(inline_data, "data", None):
                 image_outputs.append((inline_data.data, getattr(inline_data, "mime_type", "image/png")))
@@ -201,11 +215,14 @@ def initialize_chat_session():
 # 💡 [추가] 앱 시작 시 로컬 저장소에서 대화 기록 불러오기
 if "messages" not in st.session_state:
     saved_history = None
-    for storage_key in [CHAT_HISTORY_STORAGE_KEY, *LEGACY_CHAT_HISTORY_STORAGE_KEYS]:
-        candidate_history = localS.getItem(storage_key)
-        if candidate_history and isinstance(candidate_history, list):
-            saved_history = candidate_history
-            break
+    if localS is None:
+        st.session_state.messages = []
+    else:
+        for storage_key in [CHAT_HISTORY_STORAGE_KEY, *LEGACY_CHAT_HISTORY_STORAGE_KEYS]:
+            candidate_history = localS.getItem(storage_key)
+            if candidate_history and isinstance(candidate_history, list):
+                saved_history = candidate_history
+                break
 
     # 로컬 저장소에 저장된 리스트가 존재하면 그대로 복구
     if saved_history is not None and isinstance(saved_history, list):
@@ -293,7 +310,10 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
         with st.spinner("동동봇 생각 중... 🤔",show_time=True):
             try:
                 selected_model_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
-                is_image_model = selected_model_label == "Nano Banana"
+                is_image_model = selected_model_label in {"Nano Banana", "Nano Banana 2"}
+
+                response_text = ""
+                response_images = []
 
                 if is_image_model:
                     response = chat.send_message(content_parts, stream=False)
@@ -302,27 +322,23 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                         st.markdown(response_text)
                 else:
                     response = chat.send_message(content_parts, stream=True)
-                    response_text = ""
-                    
-                    message_placeholder = st.empty() 
-                    
-                    for chunk in response:
-                        chunk_text = getattr(chunk, "text", None)
-                        if chunk_text:
-                            response_text += chunk_text
-                            message_placeholder.markdown(response_text + "▌") 
-                            
-                    response_text = response_text.strip()
-                    message_placeholder.markdown(response_text) 
-                    
-                    _, response_images = extract_response_parts(response)
 
-                if response_images:
-                    for image_bytes, mime_type in response_images:
-                        try:
-                            st.image(Image.open(io.BytesIO(image_bytes)), use_container_width=True)
-                        except Exception:
-                            st.warning("이미지 응답을 표시하는 중 문제가 발생했습니다.")
+                    message_placeholder = st.empty()
+
+                    try:
+                        for chunk in response:
+                            chunk_text = getattr(chunk, "text", None)
+                            if chunk_text:
+                                response_text += chunk_text
+                                message_placeholder.markdown(response_text + "▌")
+
+                        response_text = response_text.strip()
+                        message_placeholder.markdown(response_text)
+                    except IncompleteIterationError:
+                        response_text = response_text.strip()
+                        message_placeholder.markdown(response_text or "응답이 아직 완성되지 않았습니다. 잠시 후 다시 시도해 주세요.")
+
+                    _, response_images = extract_response_parts(response)
 
                 assistant_content = response_text if response_text else (
                     "이미지 응답이 생성되었습니다." if response_images else "⚠️ 응답 없음"

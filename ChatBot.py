@@ -69,23 +69,13 @@ def reset_chat_session_on_model_change():
 
 # --- 3. 사이드바 UI 구성 ---
 with st.sidebar:
-    st.title("🔑 GEMINI API 키 설정")
-    st.markdown(
-        "각 모델은 서로 다른 API 키를 사용합니다. `Nano Banana`는 교사에게 받은 고유 키를 입력해야 하며, "
-        "입력이 올바르면 secrets에서 유료 Gemini API 키를 가져옵니다. `Gemini 3.5 Flash Lite`는 "
-        "별도 입력 없이 secrets에서 바로 로드됩니다."
-    )
-    st.caption(
-        "secrets.toml에 `api_keys.nano_banana_access_key`, `api_keys.nano_banana_paid_api_key`, "
-        "그리고 `api_keys.gemini_3_5_flash_lite`를 설정하세요."
-    )
-
     selected_model = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
     if selected_model == "Nano Banana":
+        st.title("🔑 Nano Banana 사용 키 설정")
         st.text_input(
             "Nano Banana 사용 키", 
             type="password",
-            placeholder="선생님이 알려준 고유 Nano Banana 키를 입력하세요.",
+            placeholder="선생님이 알려준 고유 키를 입력하세요.",
             key="nano_banana_access_key_input",
             on_change=reset_chat_session_on_model_change,
         )

@@ -89,7 +89,7 @@ with st.sidebar:
             "Nano Banana 2  사용 키", 
             type="password",
             help="선생님이 알려준 사용 키를 입력하세요.",
-            label_visibility="collapsed",
+            label_visibility="visible",
             key="nano_banana_access_key_input",
             on_change=reset_chat_session_on_model_change,
         )

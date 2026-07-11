@@ -8,8 +8,6 @@ from google.generativeai.types import IncompleteIterationError
 import io
 from PIL import Image
 import fitz  # PyMuPDF
-import toml
-import os
 
 # 💡 [추가] 브라우저 로컬 저장소 라이브러리 임포트
 from streamlit_local_storage import LocalStorage 
@@ -26,19 +24,34 @@ st.set_page_config(
 localS = LocalStorage()
 
 # --- 1-1. Streamlit Secrets에서 API 키 로드 함수 ---
-def load_api_key_from_secrets(password):
-    try:
-        db_credentials = st.secrets.get("db_credentials", {})
-        if db_credentials.get("Password") == password:
-            api_key = db_credentials.get("APIKEY")
-            if api_key:
-                return api_key, None
-            else:
-                return None, "Secrets에 APIKEY가 없습니다."
-        else:
-            return None, "비밀번호가 일치하지 않습니다."
-    except Exception as e:
-        return None, f"Secrets 읽기 중 오류: {e}"
+# 아래 secrets.toml 예시:
+# [api_keys]
+# nano_banana = "YOUR_NANO_BANANA_KEY"
+# gemini_3_5_flash_lite = "YOUR_GEMINI_3_5_FLASH_LITE_KEY"
+def get_secret_api_key(key_name):
+    return st.secrets.get("api_keys", {}).get(key_name)
+
+def validate_nano_banana_access_key(access_key):
+    expected = st.secrets.get("api_keys", {}).get("nano_banana_access_key")
+    if not expected or not access_key:
+        return False
+    return access_key.strip() == expected.strip()
+
+def get_model_api_key(model_label):
+    if model_label == "Nano Banana":
+        access_key = st.session_state.get("nano_banana_access_key_input", "")
+        if validate_nano_banana_access_key(access_key):
+            return st.secrets.get("api_keys", {}).get("nano_banana_paid_api_key")
+        return None
+    if model_label == "Gemini 3.5 Flash Lite":
+        return get_secret_api_key("gemini_3_5_flash_lite")
+    return None
+
+MODEL_OPTIONS = ["Nano Banana", "Gemini 3.5 Flash Lite"]
+MODEL_NAME_MAP = {
+    "Nano Banana": "gemini-2.5-flash-image",
+    "Gemini 3.5 Flash Lite": "gemini-3.5-flash-lite"
+}
 
 # --- 2. 콜백 함수 정의 ---
 def auto_apply_system_instructions_on_change():
@@ -50,65 +63,52 @@ def auto_apply_system_instructions_on_change():
     else:
         st.toast("ℹ️ System Instructions가 초기화되었습니다.")
 
-def auto_apply_api_key_on_change():
-    entered_password = st.session_state.get("gemini_api_key_input_sidebar", "")
-    st.session_state.api_key_error_text = None
-    
-    if not entered_password:
-        if st.session_state.get("api_key_configured", False) or st.session_state.get("current_api_key"):
-            st.session_state.api_key_configured = False
-            st.session_state.current_api_key = None
-            st.session_state.chat_session = None
-            st.session_state.messages = []
-        return
-
-    api_key, error_msg = load_api_key_from_secrets(entered_password)
-    
-    if error_msg:
-        st.session_state.api_key_configured = False
-        st.session_state.current_api_key = None
-        st.session_state.api_key_error_text = error_msg
-        st.session_state.chat_session = None
-        st.session_state.messages = []
-        return
-    
-    if st.session_state.get("api_key_configured", False) and st.session_state.get("current_api_key") == api_key:
-        return
-
-    try:
-        genai.configure(api_key=api_key)
-        st.session_state.api_key_configured = True
-        st.session_state.current_api_key = api_key
-        st.session_state.chat_session = None
-        # 키 변경 시 기록 초기화 방지를 위해 메시지 초기화 부분 제거 (로컬 저장소 유지)
-        st.toast("✅ API 키가 성공적으로 적용되었습니다! 새 대화를 시작합니다.")
-    except Exception as e:
-        st.session_state.api_key_configured = False
-        st.session_state.current_api_key = None
-        st.session_state.api_key_error_text = f"API 키 적용 중 오류 발생: {type(e).__name__} - {e}"
-        st.session_state.chat_session = None
-
 def reset_chat_session_on_model_change():
     st.session_state.chat_session = None
     # 모델 변경 시에도 기존 대화 내역은 유지하도록 messages 초기화 제거
 
 # --- 3. 사이드바 UI 구성 ---
 with st.sidebar:
-    if not st.session_state.get("api_key_configured", False):
-        error_message = st.session_state.get("api_key_error_text")
-        if error_message: 
-            st.error(error_message)
-            st.warning("올바른 GEMINI 사용 키인지 확인해주세요.")
-        elif not st.session_state.get("gemini_api_key_input_sidebar", ""): 
-            st.warning("GEMINI 사용 키를 입력해주세요.")
-        
-    st.title("🔑 GEMINI 사용 키 설정")
-    st.text_input(
-        "Key:", type="password", placeholder="GEMINI 사용 키를 입력하세요.", 
-        help="선생님께서 알려주는 GEMINI 사용 키를 입력해주세요.", 
-        key="gemini_api_key_input_sidebar", on_change=auto_apply_api_key_on_change
+    st.title("🔑 GEMINI API 키 설정")
+    st.markdown(
+        "각 모델은 서로 다른 API 키를 사용합니다. `Nano Banana`는 교사에게 받은 고유 키를 입력해야 하며, "
+        "입력이 올바르면 secrets에서 유료 Gemini API 키를 가져옵니다. `Gemini 3.5 Flash Lite`는 "
+        "별도 입력 없이 secrets에서 바로 로드됩니다."
     )
-    
+    st.caption(
+        "secrets.toml에 `api_keys.nano_banana_access_key`, `api_keys.nano_banana_paid_api_key`, "
+        "그리고 `api_keys.gemini_3_5_flash_lite`를 설정하세요."
+    )
+
+    selected_model = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
+    if selected_model == "Nano Banana":
+        st.text_input(
+            "Nano Banana 사용 키", 
+            type="password",
+            placeholder="선생님이 알려준 고유 Nano Banana 키를 입력하세요.",
+            key="nano_banana_access_key_input",
+            on_change=reset_chat_session_on_model_change,
+        )
+
+        access_key = st.session_state.get("nano_banana_access_key_input", "")
+        if access_key:
+            if validate_nano_banana_access_key(access_key):
+                secret_key = get_model_api_key(selected_model)
+                if secret_key:
+                    st.success("Nano Banana용 유료 Gemini API 키가 secrets에서 로드되었습니다.")
+                else:
+                    st.error("Nano Banana용 유료 Gemini API 키가 secrets에 없습니다.")
+            else:
+                st.error("Nano Banana 사용 키가 일치하지 않습니다.")
+        else:
+            st.info("Nano Banana를 사용할 때는 고유 사용 키를 입력해야 합니다.")
+    else:
+        secret_key = get_model_api_key(selected_model)
+        if secret_key:
+            st.success(f"{selected_model} API 키가 secrets에서 로드되었습니다.")
+        else:
+            st.error(f"{selected_model} API 키가 secrets에 없습니다.")
+
     st.title("📜 System Instructions")
     st.text_area(
         "동동봇의 역할, 말투, 행동 방침을 자유롭게 지시하세요", 
@@ -131,16 +131,6 @@ with st.sidebar:
         st.toast("✅ 대화 기록이 모두 초기화되었습니다.")
         st.rerun()
 
-# --- 4. 챗봇 모델 및 세션 설정 ---
-MODEL_OPTIONS = ["Gemini 2.5 Flash", "Gemini 2.5 Pro", "Nano Banana"]
-MODEL_NAME_MAP = {
-    "Gemini 2.5 Flash": "gemini-2.5-flash",
-    "Gemini 2.5 Pro": "gemini-2.5-pro",
-    "Nano Banana": "gemini-2.5-flash-image"
-}
-
-if "selected_gemini_model" not in st.session_state:
-    st.session_state.selected_gemini_model = MODEL_OPTIONS[0]
 
 SAFETY_SETTINGS_NONE = {
     'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',
@@ -169,9 +159,6 @@ def extract_response_parts(response):
     return "\n".join(text_output).strip(), image_outputs
 
 def initialize_chat_session():
-    if not st.session_state.get("api_key_configured", False):
-        return None
-    
     if "chat_session" not in st.session_state or st.session_state.chat_session is None:
         try:
             system_instructions = st.session_state.get("system_instructions", "")
@@ -180,6 +167,12 @@ def initialize_chat_session():
                 model_kwargs["system_instruction"] = system_instructions
             
             selected_model_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
+            api_key = get_model_api_key(selected_model_label)
+            if not api_key:
+                st.error(f"선택된 모델({selected_model_label})의 API 키가 설정되지 않았습니다.")
+                return None
+
+            genai.configure(api_key=api_key)
             model_name = MODEL_NAME_MAP.get(selected_model_label, MODEL_NAME_MAP[MODEL_OPTIONS[0]])
             model = genai.GenerativeModel(model_name, **model_kwargs)
             

@@ -71,7 +71,7 @@ with st.sidebar:
         st.text_input(
             "Nano Banana 사용 키", 
             type="password",
-            placeholder="선생님이 알려준 고유 키를 입력하세요.",
+            placeholder="선생님이 알려준 사용 키를 입력하세요.",
             key="nano_banana_access_key_input",
             on_change=reset_chat_session_on_model_change,
         )
@@ -80,20 +80,10 @@ with st.sidebar:
         if access_key:
             if validate_nano_banana_access_key(access_key):
                 secret_key = get_model_api_key(selected_model)
-                if secret_key:
-                    st.success("Nano Banana용 유료 Gemini API 키가 secrets에서 로드되었습니다.")
-                else:
-                    st.error("Nano Banana용 유료 Gemini API 키가 secrets에 없습니다.")
             else:
                 st.error("Nano Banana 사용 키가 일치하지 않습니다.")
         else:
-            st.info("Nano Banana를 사용할 때는 고유 사용 키를 입력해야 합니다.")
-    else:
-        secret_key = get_model_api_key(selected_model)
-        if secret_key:
-            st.success(f"{selected_model} API 키가 secrets에서 로드되었습니다.")
-        else:
-            st.error(f"{selected_model} API 키가 secrets에 없습니다.")
+            st.info("Nano Banana를 사용할 때는 사용 키를 입력해야 합니다.")
 
     st.title("📜 System Instructions")
     st.text_area(

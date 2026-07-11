@@ -24,10 +24,6 @@ st.set_page_config(
 localS = LocalStorage()
 
 # --- 1-1. Streamlit Secrets에서 API 키 로드 함수 ---
-# 아래 secrets.toml 예시:
-# [api_keys]
-# nano_banana = "YOUR_NANO_BANANA_KEY"
-# gemini_3_5_flash_lite = "YOUR_GEMINI_3_5_FLASH_LITE_KEY"
 def get_secret_api_key(key_name):
     return st.secrets.get("api_keys", {}).get(key_name)
 
@@ -47,7 +43,7 @@ def get_model_api_key(model_label):
         return get_secret_api_key("gemini_3_5_flash_lite")
     return None
 
-MODEL_OPTIONS = ["Nano Banana", "Gemini 3.5 Flash Lite"]
+MODEL_OPTIONS = [ "Gemini 3.5 Flash Lite","Nano Banana"]
 MODEL_NAME_MAP = {
     "Nano Banana": "gemini-2.5-flash-image",
     "Gemini 3.5 Flash Lite": "gemini-3.5-flash-lite"

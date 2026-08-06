@@ -145,8 +145,10 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# IDEs
+# IDEs and Editors
 .idea/
 .vscode/
 *.swp
 *.swo
+*~
+.agents/

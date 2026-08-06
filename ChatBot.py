@@ -37,7 +37,7 @@ MODEL_OPTIONS = ["Gemini 3.1 Flash Lite", "프론트엔드 개발", "이미지 �
 MODEL_NAME_MAP = {
     "Gemini 3.1 Flash Lite": "gemini-3.1-flash-lite",    # 무료/기본 모델
     "프론트엔드 개발": "gemini-3.5-flash",               # 유료 모델 (프론트엔드 봇)
-    "이미지 생성": "gemini-3.1-flash-image"              # 유료 모델 (나노바나나 등 이미지 봇)
+    "이미지 생성": "gemini-3.1-flash-image"              # 유료 모델 (이미지 봇)
 }
 
 # --- 초기 세션 상태 설정 ---
@@ -75,7 +75,7 @@ def render_copy_button(text):
         ""
         "<div style=\"font-family: Arial, sans-serif; margin-bottom: 0.75rem;\">"
         "    <button id=\"copyButton\" style=\"padding: 0.5rem 0.9rem; border: 1px solid #2563eb; border-radius: 0.5rem; background: #2563eb; color: #ffffff; font-size: 0.95rem; cursor: pointer;\">"
-        "        📋 복사"
+        "        📋 지시문 복사하기"
         "    </button>"
         "    <span id=\"copyStatus\" style=\"margin-left: 0.75rem; color: #2563eb; font-size: 0.95rem;\"></span>"
         "    <textarea id=\"copySource\" style=\"position:absolute; left:-9999px; top:0;\">" + textarea_value + "</textarea>"
@@ -190,7 +190,7 @@ with st.sidebar:
         tooltip="해당 모델은 GEMINI 사용 키 입력이 필요 없습니다."
     else:
         holder="GEMINI 사용 키를 입력하세요."
-        tooltip="선생님께서 알려주신 GEMINI 사용 키(비밀번호)를 입력해주세요."
+        tooltip="선생님께서 알려주신 GEMINI 사용 키를 입력해주세요."
 
     st.text_input(
         "Key:", type="password", placeholder=holder, 
@@ -230,19 +230,18 @@ with st.sidebar:
     )
 
     if current_model == "프론트엔드 개발":
-        st.divider()
         st.subheader("💻 코드 다운로드")
         latest_html = extract_latest_html_code(st.session_state.get("messages", []))
         if latest_html:
             st.download_button(
-                label="📥 최신 HTML 코드 내려받기",
+                label="📥 HTML 코드 내려받기",
                 data=latest_html,
                 file_name="index.html",
                 mime="text/html",
                 use_container_width=True
             )
         else:
-            st.button("📥 최신 HTML 코드 내려받기", disabled=True, use_container_width=True, help="생성된 HTML 코드가 없습니다.")
+            st.button("📥 HTML 코드 내려받기", disabled=True, use_container_width=True, help="생성된 HTML 코드가 없습니다.")
 
 # --- 챗봇 세션 설정 ---
 SAFETY_SETTINGS_NONE = {
@@ -328,7 +327,7 @@ for message in st.session_state.messages:
 if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바꿈)"):
     if not chat:
         if st.session_state.selected_gemini_model != "Gemini 3.1 Flash Lite":
-            st.error("⚠️ 유료 기능을 사용하려면 사이드바에 비밀번호(사용 키)를 먼저 입력해주세요.")
+            st.error("⚠️ 해당 기능을 사용하려면 사이드바에 사용 키를 먼저 입력해주세요.")
         st.stop()
 
     content_parts = [prompt]

@@ -12,7 +12,7 @@ from PIL import Image
 import fitz  # PyMuPDF
 import re
 from pathlib import Path
-import json
+import html
 
 # --- 1. 페이지 기본 설정 ---
 st.set_page_config(
@@ -70,21 +70,37 @@ def extract_latest_html_code(messages):
     return None
 
 def render_copy_button(text):
-    escaped_text = json.dumps(text)
-    components.html(
-        f"""
-        <div style="margin-bottom: 0.75rem;">
-            <button
-                onclick="navigator.clipboard.writeText({escaped_text}).then(() => {{ document.getElementById('copy-status').innerText = '복사되었습니다.' }}).catch(() => {{ document.getElementById('copy-status').innerText = '복사에 실패했습니다.' }})"
-                style="padding: 0.45rem 0.8rem; border: 1px solid #4f46e5; border-radius: 0.5rem; background: #4f46e5; color: white; cursor: pointer;"
-            >
-                📋 복사
-            </button>
-            <div id="copy-status" style="margin-top: 0.35rem; font-size: 0.9rem; color: #374151;"></div>
-        </div>
-        """,
-        height=90,
+    textarea_value = html.escape(text)
+    html_code = (
+        ""
+        "<div style=\"font-family: Arial, sans-serif; margin-bottom: 0.75rem;\">"
+        "    <button id=\"copyButton\" style=\"padding: 0.5rem 0.9rem; border: 1px solid #2563eb; border-radius: 0.5rem; background: #2563eb; color: #ffffff; font-size: 0.95rem; cursor: pointer;\">"
+        "        📋 복사"
+        "    </button>"
+        "    <span id=\"copyStatus\" style=\"margin-left: 0.75rem; color: #2563eb; font-size: 0.95rem;\"></span>"
+        "    <textarea id=\"copySource\" style=\"position:absolute; left:-9999px; top:0;\">" + textarea_value + "</textarea>"
+        "</div>"
+        "<script>"
+        "    const button = document.getElementById('copyButton');"
+        "    const status = document.getElementById('copyStatus');"
+        "    const source = document.getElementById('copySource');"
+        "    button.addEventListener('click', async () => {{"
+        "        try {{"
+        "            if (navigator.clipboard && navigator.clipboard.writeText) {{"
+        "                await navigator.clipboard.writeText(source.value);"
+        "            }} else {{"
+        "                source.select();"
+        "                document.execCommand('copy');"
+        "            }}"
+        "            status.innerText = '복사되었습니다.';"
+        "        }} catch (error) {{"
+        "            status.innerText = '복사에 실패했습니다.';"
+        "        }}"
+        "    }});"
+        "</script>"
+        ""
     )
+    components.html(html_code, height=120)
 
 # --- 모달(Dialog) 창 설정 ---
 # 💡 width="large" 로 가로 폭을 늘리고, 마크다운 코드가 아닌 일반 텍스트로 렌더링하여 줄바꿈을 유도합니다.

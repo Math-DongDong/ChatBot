@@ -1,16 +1,18 @@
 # ====================================================================================
-#  Gemini AI 챗봇 (Streamlit) - 모델별 API 키 입력 활성/비활성 처리
+#  Gemini AI 챗봇 (Streamlit) - 모델별 조건부 UI 및 API 키 분기 처리
 # ====================================================================================
 
 import streamlit as st
+import streamlit.components.v1 as components
 import google.generativeai as genai
 from google.api_core import exceptions as google_exceptions
 from google.generativeai.types import IncompleteIterationError
 import io
 from PIL import Image
 import fitz  # PyMuPDF
-import toml
-import os
+import re
+from pathlib import Path
+import json
 
 # --- 1. 페이지 기본 설정 ---
 st.set_page_config(
@@ -20,17 +22,31 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 💡 [수정됨] 선생님이 요청하신 모델 이름으로 변경
-MODEL_OPTIONS = ["Gemini 3.1 Flash Lite", "Nano Banana 2"]
+# --- 시스템 지시문(Prompt) 로더 ---
+def load_frontend_prompt():
+    prompt_path = Path(__file__).resolve().parent / "prompt" / "Frontend.txt"
+    try:
+        return prompt_path.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        return ""
+
+FRONTEND_DEV_PROMPT = load_frontend_prompt()
+
+# --- 모델 설정 ---
+MODEL_OPTIONS = ["Gemini 3.1 Flash Lite", "프론트엔드 개발", "이미지 생성"]
 MODEL_NAME_MAP = {
-    "Gemini 3.1 Flash Lite": "gemini-3.1-flash-lite",    # 무료/기본 모델 연결
-    "Nano Banana 2": "gemini-3.1-flash-image"            # 고급/유료 모델 연결
+    "Gemini 3.1 Flash Lite": "gemini-3.1-flash-lite",    # 무료/기본 모델
+    "프론트엔드 개발": "gemini-3.5-flash",               # 유료 모델 (프론트엔드 봇)
+    "이미지 생성": "gemini-3.1-flash-image"              # 유료 모델 (나노바나나 등 이미지 봇)
 }
 
+# --- 초기 세션 상태 설정 ---
 if "selected_gemini_model" not in st.session_state:
     st.session_state.selected_gemini_model = MODEL_OPTIONS[0]
+if "system_instructions" not in st.session_state:
+    st.session_state.system_instructions = ""
 
-# --- 1-1. Streamlit Secrets에서 API 키 로드 함수 ---
+# --- 유틸리티 함수 ---
 def load_api_key_from_secrets(password):
     try:
         db_credentials = st.secrets.get("db_credentials", {})
@@ -45,8 +61,45 @@ def load_api_key_from_secrets(password):
     except Exception as e:
         return None, f"Secrets 읽기 중 오류: {e}"
 
-# --- 2. 콜백 함수 정의 ---
+def extract_latest_html_code(messages):
+    for msg in reversed(messages):
+        if msg["role"] == "assistant":
+            matches = re.findall(r"```html\n(.*?)\n```", msg["content"], re.DOTALL | re.IGNORECASE)
+            if matches:
+                return matches[-1].strip()
+    return None
+
+def render_copy_button(text):
+    escaped_text = json.dumps(text)
+    components.html(
+        f"""
+        <div style="margin-bottom: 0.75rem;">
+            <button
+                onclick="navigator.clipboard.writeText({escaped_text}).then(() => {{ document.getElementById('copy-status').innerText = '복사되었습니다.' }}).catch(() => {{ document.getElementById('copy-status').innerText = '복사에 실패했습니다.' }})"
+                style="padding: 0.45rem 0.8rem; border: 1px solid #4f46e5; border-radius: 0.5rem; background: #4f46e5; color: white; cursor: pointer;"
+            >
+                📋 복사
+            </button>
+            <div id="copy-status" style="margin-top: 0.35rem; font-size: 0.9rem; color: #374151;"></div>
+        </div>
+        """,
+        height=90,
+    )
+
+# --- 모달(Dialog) 창 설정 ---
+# 💡 width="large" 로 가로 폭을 늘리고, 마크다운 코드가 아닌 일반 텍스트로 렌더링하여 줄바꿈을 유도합니다.
+@st.dialog("현재 적용된 System Instructions", width="large")
+def show_system_instructions_modal():
+    instructions = st.session_state.get("system_instructions", "")
+    if instructions:
+        st.markdown(instructions)
+        render_copy_button(instructions)
+    else:
+        st.info("현재 모델에 적용된 특별한 지시문이 없습니다.")
+
+# --- 콜백 함수 ---
 def auto_apply_system_instructions_on_change():
+    """사용자가 텍스트 영역에 지시문을 입력할 때 감지하는 함수"""
     new_instructions = st.session_state.get("system_instructions_input", "")
     st.session_state.system_instructions = new_instructions
     st.session_state.chat_session = None
@@ -95,30 +148,34 @@ def auto_apply_api_key_on_change():
         st.session_state.messages = []
 
 def reset_chat_session_on_model_change():
+    """모델 변경 시 세션 초기화 및 지시문 자동 적용"""
     st.session_state.chat_session = None
     st.session_state.messages = []
-    # 💡 유료 모델에서 무료 모델로 바꿀 때 텍스트 박스를 비워주어 혼란 방지
-    if st.session_state.selected_gemini_model == "Gemini 3.1 Flash Lite":
+    
+    selected_model = st.session_state.selected_gemini_model
+    if selected_model == "Gemini 3.1 Flash Lite":
         st.session_state.api_key_error_text = None
+        # 입력된 기존 지시문 복원
+        st.session_state.system_instructions = st.session_state.get("system_instructions_input", "")
+    elif selected_model == "프론트엔드 개발":
+        st.session_state.system_instructions = load_frontend_prompt()
+    else: # 이미지 생성
+        # 입력된 기존 지시문 복원
+        st.session_state.system_instructions = st.session_state.get("system_instructions_input", "")
 
-# --- 3. 사이드바 UI 구성 ---
+# --- 사이드바 UI 구성 ---
 with st.sidebar:
-    # 💡 [핵심 수정] 현재 선택된 모델이 무료(3.1 Flash)인지 확인
     current_model = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
     is_free_model = (current_model == "Gemini 3.1 Flash Lite")
-
         
     st.title("🔑 GEMINI 사용 키 설정")
-
-    # 안내 메시지 설정
     if is_free_model:
         holder="입력란 비활성화"
-        tooltip="해당 모델은 GEMINI 사용 키를 입력이 필요 없습니다."
+        tooltip="해당 모델은 GEMINI 사용 키 입력이 필요 없습니다."
     else:
         holder="GEMINI 사용 키를 입력하세요."
-        tooltip="선생님께서 알려주는 GEMINI 사용 키를 입력해주세요."
+        tooltip="선생님께서 알려주신 GEMINI 사용 키(비밀번호)를 입력해주세요."
 
-    # 💡 [핵심 수정] disabled=is_free_model 옵션으로 모델에 따라 창을 잠금 처리합니다.
     st.text_input(
         "Key:", type="password", placeholder=holder, 
         help=tooltip, 
@@ -127,7 +184,6 @@ with st.sidebar:
         disabled=is_free_model 
     )
 
-    # 무료 모델이 아닐 때(나노바나나2)만 키 입력 에러/경고창 띄우기
     if not is_free_model:
         if not st.session_state.get("api_key_configured", False):
             error_message = st.session_state.get("api_key_error_text")
@@ -136,13 +192,20 @@ with st.sidebar:
             elif not st.session_state.get("gemini_api_key_input_sidebar", ""): 
                 st.warning("GEMINI 사용 키를 입력해주세요.")
 
-
     st.title("📜 System Instructions")
-    st.text_area(
-        "동동봇의 역할, 말투, 행동 방침을 자유롭게 지시하세요", 
-        placeholder="예시: 너는 최고의 인공지능 선생님처럼 행동해. 답변은 친절하고 상세하게 알려줘.", 
-        height=150, key="system_instructions_input", on_change=auto_apply_system_instructions_on_change
-    )
+    
+    # 💡 모델에 따라 지시문 입력창(text_area)과 모달 버튼을 분기 처리
+    if current_model == "프론트엔드 개발":
+        if st.button("적용된 지시문 확인", use_container_width=True):
+            show_system_instructions_modal()
+    else:
+        st.text_area(
+            "동동봇의 역할, 말투, 행동 방침을 자유롭게 지시하세요", 
+            placeholder="예시: 너는 최고의 인공지능 선생님처럼 행동해. 답변은 친절하고 상세하게 알려줘.", 
+            height=150, 
+            key="system_instructions_input", 
+            on_change=auto_apply_system_instructions_on_change
+        )
     
     st.title("📎 파일 첨부")
     st.file_uploader(
@@ -150,7 +213,22 @@ with st.sidebar:
         accept_multiple_files=True, key="uploaded_files_sidebar"
     )
 
-# --- 4. 챗봇 세션 설정 ---
+    if current_model == "프론트엔드 개발":
+        st.divider()
+        st.subheader("💻 코드 다운로드")
+        latest_html = extract_latest_html_code(st.session_state.get("messages", []))
+        if latest_html:
+            st.download_button(
+                label="📥 최신 HTML 코드 내려받기",
+                data=latest_html,
+                file_name="index.html",
+                mime="text/html",
+                use_container_width=True
+            )
+        else:
+            st.button("📥 최신 HTML 코드 내려받기", disabled=True, use_container_width=True, help="생성된 HTML 코드가 없습니다.")
+
+# --- 챗봇 세션 설정 ---
 SAFETY_SETTINGS_NONE = {
     'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',
     'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'
@@ -174,7 +252,6 @@ def initialize_chat_session():
     selected_model_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
     is_free_model = (selected_model_label == "Gemini 3.1 Flash Lite")
 
-    # 💡 [핵심 수정] 무료 모델일 때는 secrets의 default_api_key를 강제로 먹입니다.
     if is_free_model:
         default_key = st.secrets.get("default_api_key")
         if not default_key:
@@ -182,7 +259,6 @@ def initialize_chat_session():
             return None
         genai.configure(api_key=default_key)
     else:
-        # 유료 모델(나노바나나2)일 때는 사이드바에서 입력한 키가 설정되었는지 확인
         if not st.session_state.get("api_key_configured", False):
             return None
     
@@ -211,16 +287,16 @@ def initialize_chat_session():
     
     return st.session_state.get("chat_session")
 
-# --- 5. 메인 채팅 인터페이스 ---
+# --- 메인 채팅 인터페이스 ---
 col1, col2 = st.columns([4, 1])
 with col1:
     st.title("💬 동동봇")
 with col2:
     st.selectbox(
-        "모델 선택",
+        "기능 선택",
         options=MODEL_OPTIONS,
         key="selected_gemini_model",
-        help="Gemini 모델을 선택하세요.",
+        help="사용할 봇의 기능을 선택하세요.",
         on_change=reset_chat_session_on_model_change
     )
 
@@ -234,10 +310,9 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바꿈)"):
-    # 에러 메시지 분리 (무료 모델 vs 유료 모델)
     if not chat:
-        if st.session_state.selected_gemini_model == "Nano Banana 2":
-            st.error("⚠️ 나노바나나 2를 사용하려면 사이드바에 비밀번호를 먼저 입력해주세요.")
+        if st.session_state.selected_gemini_model != "Gemini 3.1 Flash Lite":
+            st.error("⚠️ 유료 기능을 사용하려면 사이드바에 비밀번호(사용 키)를 먼저 입력해주세요.")
         st.stop()
 
     content_parts = [prompt]
@@ -285,11 +360,10 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
             st.info(f"📄 다음 파일과 함께 질문: {file_info_str}")
 
     with st.chat_message("assistant"):
-        with st.spinner("동동봇 생각 중... 🤔",show_time=True):
+        with st.spinner("동동봇 생각 중... 🤔"):
             try:
                 selected_model_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
-                # 💡 나노바나나2 인지 확인
-                is_image_model = selected_model_label == "Nano Banana 2"
+                is_image_model = (selected_model_label == "이미지 생성")
 
                 if is_image_model:
                     response = chat.send_message(content_parts, stream=False)
@@ -324,6 +398,9 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                     "이미지 응답이 생성되었습니다." if response_images else "⚠️ 응답 없음"
                 )
                 st.session_state.messages.append({"role": "assistant", "content": assistant_content})
+                
+                # 새로운 응답 후 HTML 버튼 상태 업데이트를 위해 페이지 재실행
+                st.rerun()
 
             except (google_exceptions.GoogleAPIError, IncompleteIterationError, genai.types.BlockedPromptException, genai.types.StopCandidateException) as e:
                 error_message = f"오류 발생 ({type(e).__name__}): {e}"

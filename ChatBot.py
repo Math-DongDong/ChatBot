@@ -362,9 +362,7 @@ def initialize_chat_session():
         try:
             model_label, model_name, api_key, project_type = resolve_runtime_model()
             if not api_key:
-                if model_label == "이미지 생성":
-                    st.warning("이미지 생성을 사용하려면 GEMINI 사용 키를 등록해주세요.")
-                else:
+                if model_label != "이미지 생성":
                     st.error("⚠️ 서버(secrets.toml)에 무료 모델용 'default_api_key'가 설정되지 않았습니다.")
                 return None
                 
@@ -435,15 +433,18 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if (
-    st.session_state.selected_gemini_model == "프론트엔드 개발"
+    st.session_state.selected_gemini_model in ("프론트엔드 개발", "이미지 생성")
     and not st.session_state.api_key_configured
     and not st.session_state.messages
 ):
     with st.chat_message("assistant"):
-        st.info(
-            "현재 무료 버전으로 사용 중입니다. 더 높은 버전으로 사용하려면 "
-            "사이드바에 GEMINI 사용 키를 등록하세요."
-        )
+        if st.session_state.selected_gemini_model == "이미지 생성":
+            st.info("이미지 생성을 사용하려면 사이드바에 GEMINI 사용 키를 등록해주세요.")
+        else:
+            st.info(
+                "현재 무료 버전으로 사용 중입니다. 더 높은 버전으로 사용하려면 "
+                "사이드바에 GEMINI 사용 키를 등록하세요."
+            )
 
 chat = initialize_chat_session()
 

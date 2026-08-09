@@ -4,15 +4,16 @@
 
 import streamlit as st
 import streamlit.components.v1 as components
-import google.generativeai as genai
-from google.api_core import exceptions as google_exceptions
-from google.generativeai.types import IncompleteIterationError
+from google import genai
+from google.genai import types
 import io
+import logging
 from PIL import Image
 import fitz  # PyMuPDF
 import re
 from pathlib import Path
 import html
+import uuid
 
 # --- 1. 페이지 기본 설정 ---
 st.set_page_config(
@@ -36,12 +37,17 @@ FRONTEND_DEV_PROMPT = load_frontend_prompt()
 MODEL_OPTIONS = ["Gemini 3.1 Flash Lite", "프론트엔드 개발", "이미지 생성"]
 MODEL_NAME_MAP = {
     "Gemini 3.1 Flash Lite": "gemini-3.1-flash-lite",    # 무료/기본 모델
-    "프론트엔드 개발": "gemini-3.5-flash",               # 유료 모델 (프론트엔드 봇)
+    "프론트엔드 개발": "gemini-3.6-flash",               # 키 등록 시 유료 모델
     "이미지 생성": "gemini-3.1-flash-image"              # 유료 모델 (이미지 봇)
 }
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("dongdongbot")
+
 # --- 초기 세션 상태 설정 ---
 if "selected_gemini_model" not in st.session_state:
+    st.session_state.selected_gemini_model = MODEL_OPTIONS[0]
+elif st.session_state.selected_gemini_model not in MODEL_OPTIONS:
     st.session_state.selected_gemini_model = MODEL_OPTIONS[0]
 if "system_instructions" not in st.session_state:
     st.session_state.system_instructions = ""
@@ -150,7 +156,6 @@ def auto_apply_api_key_on_change():
         return
 
     try:
-        genai.configure(api_key=api_key)
         st.session_state.api_key_configured = True
         st.session_state.current_api_key = api_key
         st.session_state.chat_session = None
@@ -169,44 +174,44 @@ def reset_chat_session_on_model_change():
     st.session_state.messages = []
     
     selected_model = st.session_state.selected_gemini_model
-    if selected_model == "Gemini 3.1 Flash Lite":
-        st.session_state.api_key_error_text = None
-        # 입력된 기존 지시문 복원
-        st.session_state.system_instructions = st.session_state.get("system_instructions_input", "")
-    elif selected_model == "프론트엔드 개발":
+    if selected_model == "프론트엔드 개발":
         st.session_state.system_instructions = load_frontend_prompt()
-    else: # 이미지 생성
+    else:
         # 입력된 기존 지시문 복원
         st.session_state.system_instructions = st.session_state.get("system_instructions_input", "")
 
 # --- 사이드바 UI 구성 ---
 with st.sidebar:
     current_model = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
-    is_free_model = (current_model == "Gemini 3.1 Flash Lite")
-        
+    is_free_model = current_model == "Gemini 3.1 Flash Lite"
+
     st.title("🔑 GEMINI 사용 키 설정")
     if is_free_model:
-        holder="입력란 비활성화"
-        tooltip="해당 모델은 GEMINI 사용 키 입력이 필요 없습니다."
+        holder = "무료 모델에서는 사용하지 않습니다."
+        tooltip = "Gemini 3.1 Flash Lite는 서버의 무료 키를 사용합니다."
+    elif current_model == "이미지 생성":
+        holder = "이미지 생성을 위한 GEMINI 사용 키를 입력하세요."
+        tooltip = "이미지 생성은 GEMINI 사용 키가 필요합니다."
     else:
-        holder="GEMINI 사용 키를 입력하세요."
-        tooltip="선생님께서 알려주신 GEMINI 사용 키를 입력해주세요."
+        holder = "키가 없으면 무료 3.1 Flash Lite를 사용합니다."
+        tooltip = "키를 등록하면 프론트엔드 개발은 3.6 Flash를 사용합니다."
 
     st.text_input(
         "Key:", type="password", placeholder=holder, 
         help=tooltip, 
         key="gemini_api_key_input_sidebar", 
         on_change=auto_apply_api_key_on_change,
-        disabled=is_free_model 
+        disabled=is_free_model,
     )
 
-    if not is_free_model:
-        if not st.session_state.get("api_key_configured", False):
-            error_message = st.session_state.get("api_key_error_text")
-            if error_message: 
-                st.warning("올바른 GEMINI 사용 키인지 확인해주세요.")
-            elif not st.session_state.get("gemini_api_key_input_sidebar", ""): 
-                st.warning("GEMINI 사용 키를 입력해주세요.")
+    if is_free_model:
+        st.info("현재 Gemini 3.1 Flash Lite 무료 모델을 사용합니다.")
+    elif not st.session_state.get("api_key_configured", False):
+        error_message = st.session_state.get("api_key_error_text")
+        if error_message:
+            st.warning("올바른 GEMINI 사용 키인지 확인해주세요.")
+        elif current_model == "프론트엔드 개발":
+            st.info("현재 무료 3.1 Flash Lite로 실행됩니다.")
 
     st.title("📜 System Instructions")
     
@@ -244,11 +249,6 @@ with st.sidebar:
             st.button("📥 HTML 코드 내려받기", disabled=True, use_container_width=True, help="생성된 HTML 코드가 없습니다.")
 
 # --- 챗봇 세션 설정 ---
-SAFETY_SETTINGS_NONE = {
-    'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',
-    'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'
-}
-
 def extract_response_parts(response):
     text_output = []
     image_outputs = []
@@ -263,44 +263,102 @@ def extract_response_parts(response):
                 image_outputs.append((inline_data.data, getattr(inline_data, "mime_type", "image/png")))
     return "\n".join(text_output).strip(), image_outputs
 
-def initialize_chat_session():
+def resolve_runtime_model():
     selected_model_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
-    is_free_model = (selected_model_label == "Gemini 3.1 Flash Lite")
+    paid_api_key = st.session_state.get("current_api_key")
 
-    if is_free_model:
-        default_key = st.secrets.get("default_api_key")
-        if not default_key:
-            st.error("⚠️ 서버(secrets.toml)에 무료 모델을 위한 'default_api_key'가 설정되지 않았습니다.")
-            return None
-        genai.configure(api_key=default_key)
-    else:
-        if not st.session_state.get("api_key_configured", False):
-            return None
-    
+    if selected_model_label == "프론트엔드 개발":
+        if paid_api_key and st.session_state.get("api_key_configured", False):
+            return "프론트엔드 개발", MODEL_NAME_MAP["프론트엔드 개발"], paid_api_key, "paid"
+        return "Gemini 3.1 Flash Lite", MODEL_NAME_MAP["Gemini 3.1 Flash Lite"], st.secrets.get("default_api_key"), "free"
+
+    if selected_model_label == "이미지 생성":
+        if paid_api_key and st.session_state.get("api_key_configured", False):
+            return "이미지 생성", MODEL_NAME_MAP["이미지 생성"], paid_api_key, "paid"
+        return "이미지 생성", MODEL_NAME_MAP["이미지 생성"], None, "paid"
+
+    return "Gemini 3.1 Flash Lite", MODEL_NAME_MAP["Gemini 3.1 Flash Lite"], st.secrets.get("default_api_key"), "free"
+
+def create_chat_session(model_label, model_name, api_key, project_type, history_messages):
+    if not api_key:
+        return None
+
+    system_instructions = (
+        FRONTEND_DEV_PROMPT
+        if model_label == "프론트엔드 개발"
+        else st.session_state.get("system_instructions", "")
+    )
+    config = types.GenerateContentConfig(
+        system_instruction=system_instructions if system_instructions.strip() else None
+    )
+    client = genai.Client(api_key=api_key)
+    gemini_history = [
+        types.Content(
+            role="model" if msg["role"] == "assistant" else "user",
+            parts=[types.Part.from_text(text=msg["content"])]
+        )
+        for msg in history_messages
+    ]
+    logger.info("chat_session_created project=%s model=%s", project_type, model_name)
+    st.session_state.active_project_type = project_type
+    st.session_state.active_model_label = model_label
+    return client.chats.create(model=model_name, config=config, history=gemini_history)
+
+def initialize_chat_session():
     if "chat_session" not in st.session_state or st.session_state.chat_session is None:
         try:
-            system_instructions = st.session_state.get("system_instructions", "")
-            model_kwargs = {"safety_settings": SAFETY_SETTINGS_NONE}
-            if system_instructions and system_instructions.strip():
-                model_kwargs["system_instruction"] = system_instructions
-            
-            model_name = MODEL_NAME_MAP.get(selected_model_label, MODEL_NAME_MAP[MODEL_OPTIONS[0]])
-            model = genai.GenerativeModel(model_name, **model_kwargs)
-            
-            gemini_history = [
-                {"role": "model" if msg["role"] == "assistant" else msg["role"], 
-                 "parts": [msg["content"]]}
-                for msg in st.session_state.get("messages", [])
-            ]
-            
-            st.session_state.chat_session = model.start_chat(history=gemini_history)
-
-        except Exception as e:
+            model_label, model_name, api_key, project_type = resolve_runtime_model()
+            if not api_key:
+                if model_label == "이미지 생성":
+                    st.warning("이미지 생성을 사용하려면 GEMINI 사용 키를 등록해주세요.")
+                else:
+                    st.error("⚠️ 서버(secrets.toml)에 무료 모델용 'default_api_key'가 설정되지 않았습니다.")
+                return None
+            st.session_state.chat_session = create_chat_session(
+                model_label, model_name, api_key, project_type,
+                st.session_state.get("messages", [])
+            )
+        except Exception as error:
             st.session_state.chat_session = None
-            err_msg = f"모델 로딩 실패: {type(e).__name__} - {e}"
+            err_msg = f"모델 로딩 실패: {type(error).__name__} - {error}"
             st.error(err_msg, icon="💥")
-    
+
     return st.session_state.get("chat_session")
+
+def send_chat_response(chat, content_parts, model_label):
+    is_image_model = model_label == "이미지 생성"
+    request_id = uuid.uuid4().hex[:12]
+    project_type = st.session_state.get("active_project_type", "unknown")
+    model_name = MODEL_NAME_MAP.get(model_label, MODEL_NAME_MAP["Gemini 3.1 Flash Lite"])
+    logger.info("request_started request_id=%s project=%s model=%s", request_id, project_type, model_name)
+    response = (
+        chat.send_message(message=content_parts)
+        if is_image_model
+        else chat.send_message_stream(message=content_parts)
+    )
+    response_text = ""
+    response_images = []
+
+    if is_image_model:
+        response_text, response_images = extract_response_parts(response)
+        if response_text:
+            st.markdown(response_text)
+    else:
+        message_placeholder = st.empty()
+        for chunk in response:
+            chunk_text = chunk.text
+            if chunk_text:
+                response_text += chunk_text
+                message_placeholder.markdown(response_text + "▌")
+        response_text = response_text.strip()
+        message_placeholder.markdown(response_text)
+        _, response_images = extract_response_parts(response)
+
+    logger.info(
+        "request_succeeded request_id=%s project=%s model=%s response_chars=%d",
+        request_id, project_type, model_name, len(response_text)
+    )
+    return response_text, response_images
 
 # --- 메인 채팅 인터페이스 ---
 col1, col2 = st.columns([4, 1])
@@ -326,8 +384,10 @@ for message in st.session_state.messages:
 
 if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바꿈)"):
     if not chat:
-        if st.session_state.selected_gemini_model != "Gemini 3.1 Flash Lite":
-            st.error("⚠️ 해당 기능을 사용하려면 사이드바에 사용 키를 먼저 입력해주세요.")
+        if st.session_state.selected_gemini_model == "이미지 생성":
+            st.error("⚠️ 이미지 생성을 사용하려면 사이드바에 사용 키를 먼저 입력해주세요.")
+        else:
+            st.error("⚠️ 무료 모델을 사용할 수 없습니다. 서버의 default_api_key를 확인해주세요.")
         st.stop()
 
     content_parts = [prompt]
@@ -377,30 +437,12 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
     with st.chat_message("assistant"):
         with st.spinner("동동봇 생각 중... 🤔"):
             try:
-                selected_model_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
-                is_image_model = (selected_model_label == "이미지 생성")
-
-                if is_image_model:
-                    response = chat.send_message(content_parts, stream=False)
-                    response_text, response_images = extract_response_parts(response)
-                    if response_text:
-                        st.markdown(response_text)
-                else:
-                    response = chat.send_message(content_parts, stream=True)
-                    response_text = ""
-                    
-                    message_placeholder = st.empty() 
-                    
-                    for chunk in response:
-                        chunk_text = getattr(chunk, "text", None)
-                        if chunk_text:
-                            response_text += chunk_text
-                            message_placeholder.markdown(response_text + "▌") 
-                            
-                    response_text = response_text.strip()
-                    message_placeholder.markdown(response_text) 
-                    
-                    _, response_images = extract_response_parts(response)
+                selected_model_label = st.session_state.get(
+                    "active_model_label", "Gemini 3.1 Flash Lite"
+                )
+                response_text, response_images = send_chat_response(
+                    chat, content_parts, selected_model_label
+                )
 
                 if response_images:
                     for image_bytes, mime_type in response_images:
@@ -417,11 +459,14 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                 # 새로운 응답 후 HTML 버튼 상태 업데이트를 위해 페이지 재실행
                 st.rerun()
 
-            except (google_exceptions.GoogleAPIError, IncompleteIterationError, genai.types.BlockedPromptException, genai.types.StopCandidateException) as e:
-                error_message = f"오류 발생 ({type(e).__name__}): {e}"
-                st.error(error_message, icon="🚨")
-                st.session_state.messages.append({"role": "assistant", "content": error_message})
-            except Exception as e:
-                error_message = f"예상치 못한 오류 발생: {type(e).__name__} - {e}"
+            except Exception as error:
+                request_id = uuid.uuid4().hex[:12]
+                project_type = st.session_state.get("active_project_type", "unknown")
+                model_name = MODEL_NAME_MAP.get(selected_model_label, "unknown")
+                logger.exception(
+                    "request_failed request_id=%s project=%s model=%s",
+                    request_id, project_type, model_name
+                )
+                error_message = f"오류 발생 ({type(error).__name__}): {error}"
                 st.error(error_message, icon="💥")
                 st.session_state.messages.append({"role": "assistant", "content": error_message})

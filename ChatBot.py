@@ -432,6 +432,16 @@ with col2:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+if (
+    st.session_state.selected_gemini_model == "프론트엔드 개발"
+    and not st.session_state.get("api_key_configured", False)
+    and not st.session_state.messages
+):
+    st.info(
+        "현재 무료 버전으로 사용 중입니다. 더 높은 버전으로 사용하려면 "
+        "사이드바에 GEMINI 사용 키를 등록하세요."
+    )
+
 chat = initialize_chat_session()
 
 for message in st.session_state.messages:

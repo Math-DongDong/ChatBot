@@ -213,13 +213,13 @@ with st.sidebar:
     )
 
     if is_free_model:
-        st.info("현재 무료 버전 사용 중")
+        st.info("현재 무료 버전 사용 중...")
     elif not st.session_state.get("api_key_configured", False):
         error_message = st.session_state.get("api_key_error_text")
         if error_message:
             st.warning("올바른 GEMINI 사용 키인지 확인해주세요.")
         elif current_model == "프론트엔드 개발":
-            st.info("현재 무료 버전 사용 중")
+            st.info("현재 무료 버전 사용 중...")
 
     st.title("📜 System Instructions")
     
@@ -293,7 +293,7 @@ with st.sidebar:
             )
         else:
             # HTML 코드가 없을 때 비활성화된 버튼 표시
-            st.button("🌐 HTML 코드 새창에서 미리보기", disabled=True, use_container_width=True)
+            st.button("🌐 HTML 코드 미리보기", disabled=True, use_container_width=True)
             st.button("📥 HTML 코드 내려받기", disabled=True, use_container_width=True, help="생성된 HTML 코드가 없습니다.")
 
 # --- 챗봇 세션 설정 ---

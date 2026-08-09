@@ -14,6 +14,7 @@ import re
 from pathlib import Path
 import html
 import uuid
+import urllib.parse  # HTML 인코딩을 위해 추가
 
 # --- 1. 페이지 기본 설정 ---
 st.set_page_config(
@@ -222,7 +223,6 @@ with st.sidebar:
 
     st.title("📜 System Instructions")
     
-    # 💡 모델에 따라 지시문 입력창(text_area)과 모달 버튼을 분기 처리
     if current_model == "프론트엔드 개발":
         if st.button("적용된 지시문 확인", use_container_width=True):
             show_system_instructions_modal()
@@ -242,9 +242,48 @@ with st.sidebar:
     )
 
     if current_model == "프론트엔드 개발":
-        st.subheader("💻 코드 다운로드")
+        st.subheader("💻 코드 미리보기 및 다운로드")
         latest_html = extract_latest_html_code(st.session_state.get("messages", []))
         if latest_html:
+            # 1. 새 창 렌더링을 위한 HTML 미리보기 버튼 (components.html 활용)
+            encoded_html = urllib.parse.quote(latest_html)
+            preview_btn_html = f"""
+            <style>
+            .preview-btn {{
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                padding: 0.5rem 0.75rem;
+                background-color: #ffffff;
+                color: #31333f;
+                border: 1px solid rgba(49, 51, 63, 0.2);
+                border-radius: 0.5rem;
+                font-family: "Source Sans Pro", sans-serif;
+                font-size: 1rem;
+                cursor: pointer;
+                text-decoration: none;
+                transition: border-color 0.15s, color 0.15s;
+                box-sizing: border-box;
+            }}
+            .preview-btn:hover {{
+                border-color: #FF4B4B;
+                color: #FF4B4B;
+            }}
+            </style>
+            <button class="preview-btn" onclick="
+                const newWindow = window.open('', '_blank');
+                if(newWindow) {{
+                    newWindow.document.write(decodeURIComponent('{encoded_html}'));
+                    newWindow.document.close();
+                }} else {{
+                    alert('팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.');
+                }}
+            ">🌐 HTML 코드 새창에서 미리보기</button>
+            """
+            components.html(preview_btn_html, height=50)
+
+            # 2. 다운로드 버튼
             st.download_button(
                 label="📥 HTML 코드 내려받기",
                 data=latest_html,
@@ -253,6 +292,8 @@ with st.sidebar:
                 use_container_width=True
             )
         else:
+            # HTML 코드가 없을 때 비활성화된 버튼 표시
+            st.button("🌐 HTML 코드 새창에서 미리보기", disabled=True, use_container_width=True)
             st.button("📥 HTML 코드 내려받기", disabled=True, use_container_width=True, help="생성된 HTML 코드가 없습니다.")
 
 # --- 챗봇 세션 설정 ---
@@ -299,7 +340,6 @@ def create_chat_session(model_label, model_name, api_key, project_type, history_
         system_instruction=system_instructions if system_instructions.strip() else None
     )
     
-    # 💡 Client 객체를 변수에 담아 반환하여 GC(가비지 컬렉션)에 의해 닫히는 것을 방지
     client = genai.Client(api_key=api_key)
     gemini_history = [
         types.Content(
@@ -326,7 +366,6 @@ def initialize_chat_session():
                     st.error("⚠️ 서버(secrets.toml)에 무료 모델용 'default_api_key'가 설정되지 않았습니다.")
                 return None
                 
-            # 💡 생성된 Client 객체와 Chat 객체를 모두 세션에 저장
             client, chat = create_chat_session(
                 model_label, model_name, api_key, project_type,
                 st.session_state.get("messages", [])

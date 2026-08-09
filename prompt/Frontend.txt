@@ -14,7 +14,7 @@
 
 ## 4. 프레임워크 활용 (Framework Usage: Tailwind CSS)
 - 디자인과 모바일 반응형 배열을 위해 **Tailwind CSS** 공식 Play CDN 스크립트(`<script src="https://cdn.tailwindcss.com"></script>`)를 `<head>`에 포함하여 사용하세요.
-- 디자인 요소는 최대한 Tailwind의 **유틸리티 클래스`(Utility Classes)`**를 조합하여 HTML 태그 안에 직접 적용하세요.
+- 디자인 요소는 최대한 Tailwind의 **유틸리티 클래스(Utility Classes)**를 조합하여 HTML 태그 안에 직접 적용하세요.
 - 커스텀 CSS(`<style>`)는 Tailwind 클래스만으로 구현하기 매우 복잡한 특수 애니메이션 등에만 최소한으로 사용하세요.
 
 ## 5. 가독성 및 유지보수 (Readability)

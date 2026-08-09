@@ -213,13 +213,13 @@ with st.sidebar:
     )
 
     if is_free_model:
-        st.info("현재 Gemini 무료 모델을 통해 운영됩니다.")
+        st.info("현재 무료 버전 사용 중")
     elif not st.session_state.get("api_key_configured", False):
         error_message = st.session_state.get("api_key_error_text")
         if error_message:
             st.warning("올바른 GEMINI 사용 키인지 확인해주세요.")
         elif current_model == "프론트엔드 개발":
-            st.info("현재 Gemini 무료 모델을 통해 운영됩니다.")
+            st.info("현재 무료 버전 사용 중")
 
     st.title("📜 System Instructions")
     

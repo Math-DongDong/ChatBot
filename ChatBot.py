@@ -195,6 +195,7 @@ with st.sidebar:
     st.title("🔑 GEMINI 사용 키 설정")
     if is_free_model:
         holder = "입력란 비활성화 상태"
+        tooltip = "무료 버전으로 운영됩니다."
     elif current_model == "이미지 생성":
         holder = "키 입력란"
         tooltip = "선생님께서 알려주신 GEMINI 사용 키를 입력해주세요."

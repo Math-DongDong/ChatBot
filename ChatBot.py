@@ -437,7 +437,7 @@ if (
     and not st.session_state.api_key_configured
     and not st.session_state.messages
 ):
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar="./images/동동이.PNG"):
         if st.session_state.selected_gemini_model == "이미지 생성":
             st.info("이미지 생성을 사용하려면 사이드바에 GEMINI 사용 키를 등록해주세요.")
         else:

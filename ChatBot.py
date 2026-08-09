@@ -279,7 +279,7 @@ with st.sidebar:
                 }} else {{
                     alert('팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.');
                 }}
-            ">🌐 HTML 코드 새창에서 미리보기</button>
+            ">🌐 HTML 코드 미리보기</button>
             """
             components.html(preview_btn_html, height=50)
 

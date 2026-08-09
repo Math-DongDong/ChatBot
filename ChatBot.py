@@ -51,6 +51,8 @@ elif st.session_state.selected_gemini_model not in MODEL_OPTIONS:
     st.session_state.selected_gemini_model = MODEL_OPTIONS[0]
 if "system_instructions" not in st.session_state:
     st.session_state.system_instructions = ""
+if "gemini_client" not in st.session_state:
+    st.session_state.gemini_client = None
 
 # --- 유틸리티 함수 ---
 def load_api_key_from_secrets(password):
@@ -109,7 +111,6 @@ def render_copy_button(text):
     components.html(html_code, height=120)
 
 # --- 모달(Dialog) 창 설정 ---
-# 💡 width="large" 로 가로 폭을 늘리고, 마크다운 코드가 아닌 일반 텍스트로 렌더링하여 줄바꿈을 유도합니다.
 @st.dialog("현재 적용된 System Instructions", width="large")
 def show_system_instructions_modal():
     instructions = st.session_state.get("system_instructions", "")
@@ -125,6 +126,7 @@ def auto_apply_system_instructions_on_change():
     new_instructions = st.session_state.get("system_instructions_input", "")
     st.session_state.system_instructions = new_instructions
     st.session_state.chat_session = None
+    st.session_state.gemini_client = None
     if new_instructions:
         st.toast("✅ System Instructions가 변경되었습니다. 다음 메시지부터 적용됩니다.")
     else:
@@ -139,6 +141,7 @@ def auto_apply_api_key_on_change():
             st.session_state.api_key_configured = False
             st.session_state.current_api_key = None
             st.session_state.chat_session = None
+            st.session_state.gemini_client = None
             st.session_state.messages = []
         return
 
@@ -149,6 +152,7 @@ def auto_apply_api_key_on_change():
         st.session_state.current_api_key = None
         st.session_state.api_key_error_text = error_msg
         st.session_state.chat_session = None
+        st.session_state.gemini_client = None
         st.session_state.messages = []
         return
     
@@ -159,6 +163,7 @@ def auto_apply_api_key_on_change():
         st.session_state.api_key_configured = True
         st.session_state.current_api_key = api_key
         st.session_state.chat_session = None
+        st.session_state.gemini_client = None
         st.session_state.messages = []
         st.toast("✅ API 키가 성공적으로 적용되었습니다! 새 대화를 시작합니다.")
     except Exception as e:
@@ -166,11 +171,13 @@ def auto_apply_api_key_on_change():
         st.session_state.current_api_key = None
         st.session_state.api_key_error_text = f"API 키 적용 중 오류 발생: {type(e).__name__} - {e}"
         st.session_state.chat_session = None
+        st.session_state.gemini_client = None
         st.session_state.messages = []
 
 def reset_chat_session_on_model_change():
     """모델 변경 시 세션 초기화 및 지시문 자동 적용"""
     st.session_state.chat_session = None
+    st.session_state.gemini_client = None
     st.session_state.messages = []
     
     selected_model = st.session_state.selected_gemini_model
@@ -187,14 +194,13 @@ with st.sidebar:
 
     st.title("🔑 GEMINI 사용 키 설정")
     if is_free_model:
-        holder = "무료 모델에서는 사용하지 않습니다."
-        tooltip = "Gemini 3.1 Flash Lite는 서버의 무료 키를 사용합니다."
+        holder = "입력란 비활성화 상태"
     elif current_model == "이미지 생성":
-        holder = "이미지 생성을 위한 GEMINI 사용 키를 입력하세요."
-        tooltip = "이미지 생성은 GEMINI 사용 키가 필요합니다."
+        holder = "키 입력란"
+        tooltip = "선생님께서 알려주신 GEMINI 사용 키를 입력해주세요."
     else:
-        holder = "키가 없으면 무료 3.1 Flash Lite를 사용합니다."
-        tooltip = "키를 등록하면 프론트엔드 개발은 3.6 Flash를 사용합니다."
+        holder = "키 입력란"
+        tooltip = "선생님께서 알려주신 GEMINI 사용 키를 입력해주세요."
 
     st.text_input(
         "Key:", type="password", placeholder=holder, 
@@ -205,13 +211,13 @@ with st.sidebar:
     )
 
     if is_free_model:
-        st.info("현재 Gemini 3.1 Flash Lite 무료 모델을 사용합니다.")
+        st.info("현재 Gemini 무료 모델을 통해 운영됩니다.")
     elif not st.session_state.get("api_key_configured", False):
         error_message = st.session_state.get("api_key_error_text")
         if error_message:
             st.warning("올바른 GEMINI 사용 키인지 확인해주세요.")
         elif current_model == "프론트엔드 개발":
-            st.info("현재 무료 3.1 Flash Lite로 실행됩니다.")
+            st.info("현재 Gemini 무료 모델을 통해 운영됩니다.")
 
     st.title("📜 System Instructions")
     
@@ -281,7 +287,7 @@ def resolve_runtime_model():
 
 def create_chat_session(model_label, model_name, api_key, project_type, history_messages):
     if not api_key:
-        return None
+        return None, None
 
     system_instructions = (
         FRONTEND_DEV_PROMPT
@@ -291,6 +297,8 @@ def create_chat_session(model_label, model_name, api_key, project_type, history_
     config = types.GenerateContentConfig(
         system_instruction=system_instructions if system_instructions.strip() else None
     )
+    
+    # 💡 Client 객체를 변수에 담아 반환하여 GC(가비지 컬렉션)에 의해 닫히는 것을 방지
     client = genai.Client(api_key=api_key)
     gemini_history = [
         types.Content(
@@ -302,7 +310,9 @@ def create_chat_session(model_label, model_name, api_key, project_type, history_
     logger.info("chat_session_created project=%s model=%s", project_type, model_name)
     st.session_state.active_project_type = project_type
     st.session_state.active_model_label = model_label
-    return client.chats.create(model=model_name, config=config, history=gemini_history)
+    
+    chat = client.chats.create(model=model_name, config=config, history=gemini_history)
+    return client, chat
 
 def initialize_chat_session():
     if "chat_session" not in st.session_state or st.session_state.chat_session is None:
@@ -314,12 +324,18 @@ def initialize_chat_session():
                 else:
                     st.error("⚠️ 서버(secrets.toml)에 무료 모델용 'default_api_key'가 설정되지 않았습니다.")
                 return None
-            st.session_state.chat_session = create_chat_session(
+                
+            # 💡 생성된 Client 객체와 Chat 객체를 모두 세션에 저장
+            client, chat = create_chat_session(
                 model_label, model_name, api_key, project_type,
                 st.session_state.get("messages", [])
             )
+            st.session_state.gemini_client = client
+            st.session_state.chat_session = chat
+            
         except Exception as error:
             st.session_state.chat_session = None
+            st.session_state.gemini_client = None
             err_msg = f"모델 로딩 실패: {type(error).__name__} - {error}"
             st.error(err_msg, icon="💥")
 

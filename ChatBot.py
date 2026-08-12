@@ -190,9 +190,9 @@ def reset_chat_session_on_model_change():
     
     selected_model = st.session_state.selected_gemini_model
     if selected_model == "프론트엔드 개발":
-        st.session_state.system_instructions = load_frontend_prompt()
+        st.session_state.system_instructions = load_prompt("Frontend.txt")
     elif selected_model == "깊이 있는 수학수업":
-        st.session_state.system_instructions = load_middleschool_prompt()
+        st.session_state.system_instructions = load_prompt("middleschoolcurriculum.txt")
     else:
         # 입력된 기존 지시문 복원
         st.session_state.system_instructions = st.session_state.get("system_instructions_input", "")

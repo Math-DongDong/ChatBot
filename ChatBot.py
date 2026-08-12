@@ -527,6 +527,9 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
             file_info_str = ", ".join([f"'{f}'" for f in uploaded_filenames])
             st.info(f"📄 다음 파일과 함께 질문: {file_info_str}")
 
+    # 첨부 파일은 현재 질문에 포함되었으므로 다음 대화에서 자동 재사용되지 않도록 비움
+    st.session_state["uploaded_files_sidebar"] = []
+
     with st.chat_message("assistant"):
         with st.spinner("동동봇 생각 중... 🤔"):
             try:

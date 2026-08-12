@@ -37,7 +37,7 @@ FRONTEND_DEV_PROMPT = load_frontend_prompt()
 # --- 모델 설정 ---
 MODEL_OPTIONS = ["Gemini 3.1 Flash Lite", "프론트엔드 개발", "이미지 생성"]
 MODEL_NAME_MAP = {
-    "Gemini 3.1 Flash Lite": "gemini-3.1-flash-lite",    # 무료/기본 모델
+    "Gemini 3.5 Flash Lite": "gemini-3.5-flash-lite",    # 무료/기본 모델
     "프론트엔드 개발": "gemini-3.6-flash",               # 키 등록 시 유료 모델
     "이미지 생성": "gemini-3.1-flash-image"              # 유료 모델 (이미지 봇)
 }

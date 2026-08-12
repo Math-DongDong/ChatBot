@@ -14,6 +14,7 @@ import re
 from pathlib import Path
 import html
 import uuid
+import base64
 import urllib.parse  # HTML 인코딩을 위해 추가
 
 # --- 1. 페이지 기본 설정 ---
@@ -25,22 +26,15 @@ st.set_page_config(
 )
 
 # --- 시스템 지시문(Prompt) 로더 ---
-def load_frontend_prompt():
-    prompt_path = Path(__file__).resolve().parent / "prompt" / "Frontend.txt"
+def load_prompt(filename: str) -> str:
+    prompt_path = Path(__file__).resolve().parent / "prompt" / filename
     try:
         return prompt_path.read_text(encoding="utf-8").strip()
     except FileNotFoundError:
         return ""
 
-def load_middleschool_prompt():
-    prompt_path = Path(__file__).resolve().parent / "prompt" / "middleschoolcurriculum.txt"
-    try:
-        return prompt_path.read_text(encoding="utf-8").strip()
-    except FileNotFoundError:
-        return ""
-
-FRONTEND_DEV_PROMPT = load_frontend_prompt()
-MIDDLE_SCHOOL_PROMPT = load_middleschool_prompt()
+FRONTEND_DEV_PROMPT = load_prompt("Frontend.txt")
+MIDDLE_SCHOOL_PROMPT = load_prompt("middleschoolcurriculum.txt")
 
 # --- 모델 설정 ---
 MODEL_OPTIONS = ["Gemini 3.5 Flash Lite", "프론트엔드 개발", "깊이 있는 수학수업", "이미지 생성"]
@@ -65,6 +59,8 @@ if "gemini_client" not in st.session_state:
     st.session_state.gemini_client = None
 if "api_key_configured" not in st.session_state:
     st.session_state.api_key_configured = False
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
 # --- 유틸리티 함수 ---
 def load_api_key_from_secrets(password):
@@ -464,7 +460,14 @@ chat = initialize_chat_session()
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        st.markdown(message.get("content", ""))
+        if message["role"] == "assistant" and message.get("images"):
+            for image_item in message["images"]:
+                try:
+                    image_bytes = base64.b64decode(image_item["data"])
+                    st.image(Image.open(io.BytesIO(image_bytes)), use_container_width=True)
+                except Exception:
+                    st.warning("이미지 응답을 표시하는 중 문제가 발생했습니다.")
 
 if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바꿈)"):
     if not chat:
@@ -528,17 +531,25 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                     chat, content_parts, selected_model_label
                 )
 
-                if response_images:
-                    for image_bytes, mime_type in response_images:
-                        try:
-                            st.image(Image.open(io.BytesIO(image_bytes)), use_container_width=True)
-                        except Exception:
-                            st.warning("이미지 응답을 표시하는 중 문제가 발생했습니다.")
-
                 assistant_content = response_text if response_text else (
                     "이미지 응답이 생성되었습니다." if response_images else "⚠️ 응답 없음"
                 )
-                st.session_state.messages.append({"role": "assistant", "content": assistant_content})
+                message_payload = {"role": "assistant", "content": assistant_content}
+
+                if response_images:
+                    encoded_images = []
+                    for image_bytes, mime_type in response_images:
+                        try:
+                            encoded_images.append({
+                                "data": base64.b64encode(image_bytes).decode("ascii"),
+                                "mime_type": mime_type,
+                            })
+                        except Exception:
+                            continue
+                    if encoded_images:
+                        message_payload["images"] = encoded_images
+
+                st.session_state.messages.append(message_payload)
                 
                 # 새로운 응답 후 HTML 버튼 상태 업데이트를 위해 페이지 재실행
                 st.rerun()

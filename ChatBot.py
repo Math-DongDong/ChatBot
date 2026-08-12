@@ -32,13 +32,22 @@ def load_frontend_prompt():
     except FileNotFoundError:
         return ""
 
+def load_middleschool_prompt():
+    prompt_path = Path(__file__).resolve().parent / "prompt" / "middleschoolcurriculum.txt"
+    try:
+        return prompt_path.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        return ""
+
 FRONTEND_DEV_PROMPT = load_frontend_prompt()
+MIDDLE_SCHOOL_PROMPT = load_middleschool_prompt()
 
 # --- 모델 설정 ---
-MODEL_OPTIONS = ["Gemini 3.5 Flash Lite", "프론트엔드 개발", "이미지 생성"]
+MODEL_OPTIONS = ["Gemini 3.5 Flash Lite", "프론트엔드 개발", "깊이 있는 수학수업", "이미지 생성"]
 MODEL_NAME_MAP = {
     "Gemini 3.5 Flash Lite": "gemini-3.5-flash-lite",    # 무료/기본 모델
     "프론트엔드 개발": "gemini-3.6-flash",               # 키 등록 시 유료 모델
+    "깊이 있는 수학수업": "gemini-3.6-flash",            # 키 등록 시 유료 모델
     "이미지 생성": "gemini-3.1-flash-image"              # 유료 모델 (이미지 봇)
 }
 
@@ -186,6 +195,8 @@ def reset_chat_session_on_model_change():
     selected_model = st.session_state.selected_gemini_model
     if selected_model == "프론트엔드 개발":
         st.session_state.system_instructions = load_frontend_prompt()
+    elif selected_model == "깊이 있는 수학수업":
+        st.session_state.system_instructions = load_middleschool_prompt()
     else:
         # 입력된 기존 지시문 복원
         st.session_state.system_instructions = st.session_state.get("system_instructions_input", "")
@@ -220,12 +231,12 @@ with st.sidebar:
         error_message = st.session_state.get("api_key_error_text")
         if error_message:
             st.warning("올바른 GEMINI 사용 키인지 확인해주세요.")
-        elif current_model == "프론트엔드 개발":
+        elif current_model in ("프론트엔드 개발", "깊이 있는 수학수업"):
             st.info("현재 무료 버전 사용 중...")
 
     st.title("📜 System Instructions")
     
-    if current_model == "프론트엔드 개발":
+    if current_model in ("프론트엔드 개발", "깊이 있는 수학수업"):
         if st.button("적용된 지시문 확인", use_container_width=True):
             show_system_instructions_modal()
     else:
@@ -317,9 +328,9 @@ def resolve_runtime_model():
     selected_model_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
     paid_api_key = st.session_state.get("current_api_key")
 
-    if selected_model_label == "프론트엔드 개발":
+    if selected_model_label in ("프론트엔드 개발", "깊이 있는 수학수업"):
         if paid_api_key and st.session_state.get("api_key_configured", False):
-            return "프론트엔드 개발", MODEL_NAME_MAP["프론트엔드 개발"], paid_api_key, "paid"
+            return selected_model_label, MODEL_NAME_MAP[selected_model_label], paid_api_key, "paid"
         return "Gemini 3.5 Flash Lite", MODEL_NAME_MAP["Gemini 3.5 Flash Lite"], st.secrets.get("default_api_key"), "free"
 
     if selected_model_label == "이미지 생성":
@@ -336,6 +347,8 @@ def create_chat_session(model_label, model_name, api_key, project_type, history_
     system_instructions = (
         FRONTEND_DEV_PROMPT
         if model_label == "프론트엔드 개발"
+        else MIDDLE_SCHOOL_PROMPT
+        if model_label == "깊이 있는 수학수업"
         else st.session_state.get("system_instructions", "")
     )
     config = types.GenerateContentConfig(

@@ -193,7 +193,7 @@ def reset_chat_session_on_model_change():
 # --- 사이드바 UI 구성 ---
 with st.sidebar:
     current_model = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
-    is_free_model = current_model == "Gemini 3.1 Flash Lite"
+    is_free_model = current_model == "Gemini 3.5 Flash Lite"
 
     st.title("🔑 GEMINI 사용 키 설정")
     if is_free_model:
@@ -320,14 +320,14 @@ def resolve_runtime_model():
     if selected_model_label == "프론트엔드 개발":
         if paid_api_key and st.session_state.get("api_key_configured", False):
             return "프론트엔드 개발", MODEL_NAME_MAP["프론트엔드 개발"], paid_api_key, "paid"
-        return "Gemini 3.1 Flash Lite", MODEL_NAME_MAP["Gemini 3.1 Flash Lite"], st.secrets.get("default_api_key"), "free"
+        return "Gemini 3.5 Flash Lite", MODEL_NAME_MAP["Gemini 3.5 Flash Lite"], st.secrets.get("default_api_key"), "free"
 
     if selected_model_label == "이미지 생성":
         if paid_api_key and st.session_state.get("api_key_configured", False):
             return "이미지 생성", MODEL_NAME_MAP["이미지 생성"], paid_api_key, "paid"
         return "이미지 생성", MODEL_NAME_MAP["이미지 생성"], None, "paid"
 
-    return "Gemini 3.1 Flash Lite", MODEL_NAME_MAP["Gemini 3.1 Flash Lite"], st.secrets.get("default_api_key"), "free"
+    return "Gemini 3.5 Flash Lite", MODEL_NAME_MAP["Gemini 3.5 Flash Lite"], st.secrets.get("default_api_key"), "free"
 
 def create_chat_session(model_label, model_name, api_key, project_type, history_messages):
     if not api_key:
@@ -385,7 +385,7 @@ def send_chat_response(chat, content_parts, model_label):
     is_image_model = model_label == "이미지 생성"
     request_id = uuid.uuid4().hex[:12]
     project_type = st.session_state.get("active_project_type", "unknown")
-    model_name = MODEL_NAME_MAP.get(model_label, MODEL_NAME_MAP["Gemini 3.1 Flash Lite"])
+    model_name = MODEL_NAME_MAP.get(model_label, MODEL_NAME_MAP["Gemini 3.5 Flash Lite"])
     logger.info("request_started request_id=%s project=%s model=%s", request_id, project_type, model_name)
     response = (
         chat.send_message(message=content_parts)
@@ -509,7 +509,7 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
         with st.spinner("동동봇 생각 중... 🤔"):
             try:
                 selected_model_label = st.session_state.get(
-                    "active_model_label", "Gemini 3.1 Flash Lite"
+                    "active_model_label", "Gemini 3.5 Flash Lite"
                 )
                 response_text, response_images = send_chat_response(
                     chat, content_parts, selected_model_label

@@ -527,8 +527,9 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
             file_info_str = ", ".join([f"'{f}'" for f in uploaded_filenames])
             st.info(f"📄 다음 파일과 함께 질문: {file_info_str}")
 
-    # 첨부 파일은 현재 질문에 포함되었으므로 다음 대화에서 자동 재사용되지 않도록 비움
-    st.session_state["uploaded_files_sidebar"] = []
+    # 첨부 파일은 현재 질문에 포함되었으므로 다음 대화에서 자동 재사용되지 않도록 안전하게 초기화
+    # 파일 업로드 위젯은 등록된 widget key를 직접 재할당하는 방식이 아니라, 상태를 제거하는 방식으로 비워야 함
+    st.session_state.pop("uploaded_files_sidebar", None)
 
     with st.chat_message("assistant"):
         with st.spinner("동동봇 생각 중... 🤔"):

@@ -250,11 +250,6 @@ with st.sidebar:
         accept_multiple_files=True, key="uploaded_files_sidebar"
     )
 
-    if st.session_state.get("last_attached_files"):
-        st.caption("최근 첨부 파일")
-        for file_name in st.session_state["last_attached_files"]:
-            st.write(f"• {file_name}")
-
     if current_model == "프론트엔드 개발":
         st.subheader("💻 코드 미리보기 및 다운로드")
         latest_html = extract_latest_html_code(st.session_state.get("messages", []))
@@ -525,7 +520,6 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                     st.error(f"HTML 파일 '{uploaded_file.name}' 처리 중 오류: {e}")
 
 
-    st.session_state.last_attached_files = uploaded_filenames
     st.session_state.messages.append({"role": "user", "content": prompt, "files": uploaded_filenames})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -534,9 +528,6 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
         if uploaded_filenames:
             file_info_str = ", ".join([f"'{f}'" for f in uploaded_filenames])
             st.info(f"📄 다음 파일과 함께 질문: {file_info_str}")
-
-    # st.file_uploader는 위젯 상태 자체를 유지하는 구조라서, 대화 기록용 첨부 표시와는 별개로 남아 있습니다.
-    # 사용자에게는 최근 첨부 파일 목록이 지속적으로 보이도록 별도 세션 상태를 사용합니다.
 
     with st.chat_message("assistant"):
         with st.spinner("동동봇 생각 중... 🤔"):
@@ -568,8 +559,9 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
 
                 st.session_state.messages.append(message_payload)
                 
-                # 새로운 응답 후 HTML 버튼 상태 업데이트를 위해 페이지 재실행
-                st.rerun()
+                if uploaded_filenames:
+                    st.toast("📎 사이드바에 업로드한 첨부파일을 비우세요.", icon="ℹ️")
+
 
             except Exception as error:
                 request_id = uuid.uuid4().hex[:12]

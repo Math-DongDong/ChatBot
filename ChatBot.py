@@ -206,12 +206,12 @@ with st.sidebar:
     if is_free_model:
         holder = "입력란 비활성화 상태"
         tooltip = "무료 버전으로 운영됩니다."
-    elif current_model == "이미지 생성":
+    elif current_model in ("프론트엔드 개발", "이미지 생성"):
         holder = "키 입력란"
         tooltip = "선생님께서 알려주신 GEMINI 사용 키를 입력해주세요."
     else:
         holder = "키 입력란"
-        tooltip = "선생님께서 알려주신 GEMINI 사용 키를 입력해주세요."
+        tooltip = "GEMINI 사용 키를 입력해주세요."
 
     st.text_input(
         "Key:", type="password", placeholder=holder, 
@@ -442,13 +442,19 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if (
-    st.session_state.selected_gemini_model in ("프론트엔드 개발", "이미지 생성")
+    st.session_state.selected_gemini_model in ("프론트엔드 개발", "깊이 있는 수학수업", "이미지 생성")
     and not st.session_state.api_key_configured
     and not st.session_state.messages
 ):
     with st.chat_message("assistant", avatar="./images/동동이.PNG"):
         if st.session_state.selected_gemini_model == "이미지 생성":
             st.info("이미지 생성을 사용하려면 사이드바에 GEMINI 사용 키를 등록해주세요.")
+        elif st.session_state.selected_gemini_model == "깊이 있는 수학수업":
+            st.info(
+                "수학수업을 설계할 때 도움을 받을 수 있습니다.\n\n"
+                "현재 무료 버전으로 사용 중이며 유료 버전으로 사용하려면 "
+                "사이드바에 GEMINI 사용 키를 등록하세요."
+            )
         else:
             st.info(
                 "데이터베이스가 필요없는 웹페이지를 제작할 수 있습니다.\n\n"

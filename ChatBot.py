@@ -560,7 +560,7 @@ if prompt := st.chat_input("무엇이 궁금하신가요? (Shift+Enter로 줄바
                 st.session_state.messages.append(message_payload)
                 
                 if uploaded_filenames:
-                    st.toast("📎 사이드바에 업로드한 첨부파일을 비우세요.", icon="ℹ️")
+                    st.toast("📎 파일 업로드 완료! \n 사이드바에 업로드한 첨부파일을 비우세요.", icon="ℹ️")
 
 
             except Exception as error:

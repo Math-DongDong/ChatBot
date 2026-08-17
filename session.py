@@ -35,3 +35,4 @@ def reset_session_for_new_chat():
     st.session_state.chat_session = None
     st.session_state.gemini_client = None
     st.session_state.messages = []
+    st.session_state.summary_html = None

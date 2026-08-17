@@ -15,6 +15,18 @@ from config import load_prompt
 from utils import extract_latest_html_code, render_copy_button, summarize_conversation
 
 
+def get_preview_html_source(messages: list, summary_html: str | None = None) -> str | None:
+    """미리보기 대상 HTML을 우선순위에 따라 반환한다."""
+    if summary_html and summary_html.strip():
+        return summary_html.strip()
+    return extract_latest_html_code(messages)
+
+
+def has_summary_content(messages: list) -> bool:
+    """요약 버튼이 활성화될 수 있는지 판단한다."""
+    return bool(messages)
+
+
 @st.dialog("현재 적용된 System Instructions", width="large")
 def show_system_instructions_modal():
     """지시문 확인 모달 다이얼로그"""
@@ -94,11 +106,11 @@ def _render_file_upload_section():
 def _render_html_preview_section():
     """HTML 코드 미리보기 및 다운로드 섹션 렌더링"""
     st.subheader("💻 코드 미리보기 및 다운로드")
-    latest_html = extract_latest_html_code(st.session_state.get("messages", []))
+    messages = st.session_state.get("messages", [])
+    preview_html = get_preview_html_source(messages, st.session_state.get("summary_html"))
 
-    if latest_html:
-        # 새 창 렌더링을 위한 HTML 미리보기 버튼
-        encoded_html = urllib.parse.quote(latest_html)
+    if preview_html:
+        encoded_html = urllib.parse.quote(preview_html)
         preview_btn_html = f"""
         <style>
         .preview-btn {{
@@ -135,11 +147,12 @@ def _render_html_preview_section():
         """
         components.html(preview_btn_html, height=50)
 
-        # 다운로드 버튼
+        download_label = "📥 수업 설계 HTML 내려받기" if st.session_state.get("summary_html") else "📥 HTML 코드 내려받기"
+        download_filename = "수업설계_요약.html" if st.session_state.get("summary_html") else "index.html"
         st.download_button(
-            label="📥 HTML 코드 내려받기",
-            data=latest_html,
-            file_name="index.html",
+            label=download_label,
+            data=preview_html,
+            file_name=download_filename,
             mime="text/html",
             use_container_width=True,
         )
@@ -162,7 +175,7 @@ def _render_summary_export_section(feature: dict):
     st.subheader("📄 대화내용 요약하기")
 
     messages = st.session_state.get("messages", [])
-    has_messages = bool(messages)
+    has_messages = has_summary_content(messages)
 
     # 요약 버튼
     if st.button(

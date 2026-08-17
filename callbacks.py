@@ -48,6 +48,7 @@ def auto_apply_api_key_on_change():
             st.session_state.chat_session = None
             st.session_state.gemini_client = None
             st.session_state.messages = []
+            st.session_state.summary_html = None
         return
 
     api_key, error_msg = load_api_key_from_secrets(entered_password)
@@ -59,6 +60,7 @@ def auto_apply_api_key_on_change():
         st.session_state.chat_session = None
         st.session_state.gemini_client = None
         st.session_state.messages = []
+        st.session_state.summary_html = None
         return
 
     if st.session_state.get(
@@ -72,6 +74,7 @@ def auto_apply_api_key_on_change():
         st.session_state.chat_session = None
         st.session_state.gemini_client = None
         st.session_state.messages = []
+        st.session_state.summary_html = None
         st.toast("✅ API 키가 성공적으로 적용되었습니다! 새 대화를 시작합니다.")
     except Exception as e:
         st.session_state.api_key_configured = False
@@ -82,6 +85,7 @@ def auto_apply_api_key_on_change():
         st.session_state.chat_session = None
         st.session_state.gemini_client = None
         st.session_state.messages = []
+        st.session_state.summary_html = None
 
 
 def reset_chat_session_on_model_change():
@@ -89,6 +93,7 @@ def reset_chat_session_on_model_change():
     st.session_state.chat_session = None
     st.session_state.gemini_client = None
     st.session_state.messages = []
+    st.session_state.summary_html = None
 
     selected_model = st.session_state.selected_gemini_model
 

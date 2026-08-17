@@ -113,3 +113,64 @@ def process_uploaded_files(staged_files: list) -> tuple[list, list[Image.Image],
                 st.error(f"HTML 파일 '{uploaded_file.name}' 처리 중 오류: {e}")
 
     return content_parts, pil_images_for_display, uploaded_filenames
+
+
+def build_conversation_text(messages: list) -> str:
+    """채팅 히스토리를 텍스트 형태로 변환"""
+    lines = []
+    for msg in messages:
+        role = "선생님" if msg["role"] == "user" else "AI"
+        content = msg.get("content", "")
+        lines.append(f"[{role}]\n{content}")
+    return "\n\n---\n\n".join(lines)
+
+
+def summarize_conversation(
+    messages: list,
+    summarize_prompt: str,
+    api_key: str,
+    model_name: str,
+) -> tuple[str | None, str | None]:
+    """
+    대화 히스토리 + summarize 프롬프트를 Gemini API에 단발성 전송하여 HTML 코드를 반환
+
+    Returns:
+        (html_code, error_message) — 성공 시 html_code, 실패 시 error_message
+    """
+    from google import genai
+    from google.genai import types as genai_types
+
+    if not messages:
+        return None, "요약할 대화 내용이 없습니다."
+    if not api_key:
+        return None, "API 키가 없습니다. 사이드바에 키를 등록하거나 무료 키를 서버에 설정해주세요."
+
+    conversation_text = build_conversation_text(messages)
+    full_prompt = (
+        f"{summarize_prompt}\n\n"
+        f"# 아래는 지금까지의 대화 전체 기록입니다.\n\n"
+        f"{conversation_text}"
+    )
+
+    try:
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model=model_name,
+            contents=full_prompt,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=None
+            ),
+        )
+        raw_text = response.text or ""
+        # 응답에서 HTML 코드 블록 추출
+        matches = re.findall(
+            r"```html\n(.*?)\n```", raw_text, re.DOTALL | re.IGNORECASE
+        )
+        if matches:
+            return matches[-1].strip(), None
+        # 코드 블록 없이 HTML 태그가 직접 있는 경우도 허용
+        if raw_text.strip().startswith("<!DOCTYPE") or raw_text.strip().startswith("<html"):
+            return raw_text.strip(), None
+        return None, "AI 응답에서 HTML 코드를 찾을 수 없습니다. 다시 시도해주세요."
+    except Exception as e:
+        return None, f"요약 생성 중 오류: {type(e).__name__} - {e}"

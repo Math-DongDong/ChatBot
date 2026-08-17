@@ -19,6 +19,7 @@ def init_session_state():
         "api_key_error_text": None,
         "active_project_type": None,
         "active_model_label": None,
+        "summary_html": None,
     }
     for key, default_value in defaults.items():
         if key not in st.session_state:

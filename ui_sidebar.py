@@ -11,7 +11,8 @@ from callbacks import (
     auto_apply_api_key_on_change,
     auto_apply_system_instructions_on_change,
 )
-from utils import extract_latest_html_code, render_copy_button
+from config import load_prompt
+from utils import extract_latest_html_code, render_copy_button, summarize_conversation
 
 
 @st.dialog("현재 적용된 System Instructions", width="large")
@@ -154,6 +155,74 @@ def _render_html_preview_section():
         )
 
 
+def _render_summary_export_section(feature: dict):
+    """대화내용 요약 → HTML 다운로드 섹션 렌더링"""
+    from config import MODEL_NAME_MAP, MODEL_OPTIONS
+
+    st.subheader("📄 대화내용 요약하기")
+
+    messages = st.session_state.get("messages", [])
+    has_messages = bool(messages)
+
+    # 요약 버튼
+    if st.button(
+        "✨ 수업 설계 내용 HTML로 요약",
+        use_container_width=True,
+        disabled=not has_messages,
+        help="대화 내용이 없으면 비활성화됩니다." if not has_messages else None,
+    ):
+        summarize_prompt_file = feature.get("summarize_prompt_file", "")
+        summarize_prompt = load_prompt(summarize_prompt_file) if summarize_prompt_file else ""
+
+        if not summarize_prompt:
+            st.error("요약 지시문 파일을 찾을 수 없습니다.")
+        else:
+            # API 키 결정 (유료 키 우선, 없으면 무료 키)
+            api_key = (
+                st.session_state.get("current_api_key")
+                if st.session_state.get("api_key_configured", False)
+                else st.secrets.get("default_api_key")
+            )
+            # 실제 사용 모델명 결정 (유료 키 유무에 따라)
+            selected_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
+            if st.session_state.get("api_key_configured", False):
+                model_name = MODEL_NAME_MAP.get(selected_label, MODEL_NAME_MAP.get(MODEL_OPTIONS[0], ""))
+            else:
+                model_name = MODEL_NAME_MAP.get(MODEL_OPTIONS[0], "")
+
+            with st.spinner("AI가 대화 내용을 분석하여 HTML 문서를 생성 중입니다... ⏳"):
+                html_code, error_msg = summarize_conversation(
+                    messages=messages,
+                    summarize_prompt=summarize_prompt,
+                    api_key=api_key,
+                    model_name=model_name,
+                )
+
+            if error_msg:
+                st.error(f"요약 실패: {error_msg}")
+            else:
+                st.session_state.summary_html = html_code
+                st.success("HTML 문서가 생성되었습니다! 아래에서 다운로드하세요.")
+
+    # 다운로드 버튼 (생성된 HTML이 있을 때)
+    summary_html = st.session_state.get("summary_html")
+    if summary_html:
+        st.download_button(
+            label="📥 수업 설계 HTML 내려받기",
+            data=summary_html,
+            file_name="수업설계_요약.html",
+            mime="text/html",
+            use_container_width=True,
+        )
+    else:
+        st.button(
+            "📥 수업 설계 HTML 내려받기",
+            disabled=True,
+            use_container_width=True,
+            help="요약 버튼을 먼저 눌러주세요.",
+        )
+
+
 def render_sidebar():
     """사이드바 전체 렌더링"""
     with st.sidebar:
@@ -164,6 +233,10 @@ def render_sidebar():
         _render_system_instructions_section(current_model, feature)
         _render_file_upload_section()
 
-        # HTML 미리보기는 해당 기능에만 표시
+        # HTML 미리보기는 프론트엔드 개발 기능에만 표시
         if feature.get("has_html_preview", False):
             _render_html_preview_section()
+
+        # 대화 요약 내보내기는 수학수업 기능에만 표시
+        if feature.get("has_summary_export", False):
+            _render_summary_export_section(feature)

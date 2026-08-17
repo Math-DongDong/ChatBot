@@ -169,15 +169,15 @@ def _render_html_preview_section():
 
 
 def _render_summary_export_section(feature: dict):
-    """대화내용 요약 → HTML 다운로드 섹션 렌더링"""
+    """대화내용 요약 → 미리보기 → 다운로드 버튼을 순서대로 렌더링"""
     from config import MODEL_NAME_MAP, MODEL_OPTIONS
 
     st.subheader("📄 대화내용 요약하기")
 
     messages = st.session_state.get("messages", [])
     has_messages = has_summary_content(messages)
+    summary_html = st.session_state.get("summary_html")
 
-    # 요약 버튼
     if st.button(
         "✨ 수업 설계 내용 HTML로 요약",
         use_container_width=True,
@@ -190,13 +190,11 @@ def _render_summary_export_section(feature: dict):
         if not summarize_prompt:
             st.error("요약 지시문 파일을 찾을 수 없습니다.")
         else:
-            # API 키 결정 (유료 키 우선, 없으면 무료 키)
             api_key = (
                 st.session_state.get("current_api_key")
                 if st.session_state.get("api_key_configured", False)
                 else st.secrets.get("default_api_key")
             )
-            # 실제 사용 모델명 결정 (유료 키 유무에 따라)
             selected_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
             if st.session_state.get("api_key_configured", False):
                 model_name = MODEL_NAME_MAP.get(selected_label, MODEL_NAME_MAP.get(MODEL_OPTIONS[0], ""))
@@ -215,11 +213,47 @@ def _render_summary_export_section(feature: dict):
                 st.error(f"요약 실패: {error_msg}")
             else:
                 st.session_state.summary_html = html_code
-                st.success("HTML 문서가 생성되었습니다! 아래에서 다운로드하세요.")
+                st.success("HTML 문서가 생성되었습니다! 아래에서 확인하고 내려받을 수 있습니다.")
 
-    # 다운로드 버튼 (생성된 HTML이 있을 때)
     summary_html = st.session_state.get("summary_html")
     if summary_html:
+        encoded_html = urllib.parse.quote(summary_html)
+        preview_btn_html = f"""
+        <style>
+        .preview-btn {{
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            background-color: #ffffff;
+            color: #31333f;
+            border: 1px solid rgba(49, 51, 63, 0.2);
+            border-radius: 0.5rem;
+            font-family: "Source Sans Pro", sans-serif;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: border-color 0.15s, color 0.15s;
+            box-sizing: border-box;
+        }}
+        .preview-btn:hover {{
+            border-color: #FF4B4B;
+            color: #FF4B4B;
+        }}
+        </style>
+        <button class="preview-btn" onclick="
+            const newWindow = window.open('', '_blank');
+            if(newWindow) {{
+                newWindow.document.write(decodeURIComponent('{encoded_html}'));
+                newWindow.document.close();
+            }} else {{
+                alert('팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.');
+            }}
+        ">🌐 수업 설계 HTML 미리보기</button>
+        """
+        components.html(preview_btn_html, height=50)
+
         st.download_button(
             label="📥 수업 설계 HTML 내려받기",
             data=summary_html,
@@ -228,6 +262,12 @@ def _render_summary_export_section(feature: dict):
             use_container_width=True,
         )
     else:
+        st.button(
+            "🌐 수업 설계 HTML 미리보기",
+            disabled=True,
+            use_container_width=True,
+            help="요약 버튼을 먼저 눌러주세요.",
+        )
         st.button(
             "📥 수업 설계 HTML 내려받기",
             disabled=True,
@@ -246,10 +286,10 @@ def render_sidebar():
         _render_system_instructions_section(current_model, feature)
         _render_file_upload_section()
 
-        # HTML 미리보기는 프론트엔드 개발 기능에만 표시
-        if feature.get("has_html_preview", False):
+        # 프론트엔드 개발 기능은 별도 HTML 미리보기 섹션을 유지
+        if feature.get("has_html_preview", False) and not feature.get("has_summary_export", False):
             _render_html_preview_section()
 
-        # 대화 요약 내보내기는 수학수업 기능에만 표시
+        # 대화 요약 내보내기는 수학수업 기능에서 요약/미리보기/다운로드를 연속 배치
         if feature.get("has_summary_export", False):
             _render_summary_export_section(feature)

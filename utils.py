@@ -14,12 +14,19 @@ import fitz  # PyMuPDF
 def extract_latest_html_code(messages: list) -> str | None:
     """채팅 히스토리에서 가장 최근 HTML 코드 블록을 추출"""
     for msg in reversed(messages):
-        if msg["role"] == "assistant":
+        if msg.get("role") == "assistant":
+            content = msg.get("content", "")
             matches = re.findall(
-                r"```html\n(.*?)\n```", msg["content"], re.DOTALL | re.IGNORECASE
+                r"```(?:html)?\s*[\r\n]+(.*?)```", content, re.DOTALL | re.IGNORECASE
             )
-            if matches:
-                return matches[-1].strip()
+            for code in reversed(matches):
+                code_stripped = code.strip()
+                if "<html" in code_stripped.lower() or "<!doctype" in code_stripped.lower() or "</div>" in code_stripped.lower():
+                    return code_stripped
+            # 코드 블록 없이 HTML 태그로 직접 시작하는 경우
+            stripped = content.strip()
+            if stripped.startswith("<!DOCTYPE") or stripped.startswith("<html"):
+                return stripped
     return None
 
 

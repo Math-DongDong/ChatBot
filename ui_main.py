@@ -156,6 +156,7 @@ def _handle_user_input(chat):
                         "📎 파일 업로드 완료! 사이드바에 업로드한 첨부파일을 비우세요.",
                         icon="ℹ️",
                     )
+                st.rerun()
 
             except Exception as error:
                 request_id = uuid.uuid4().hex[:12]
@@ -176,6 +177,7 @@ def _handle_user_input(chat):
                 st.session_state.messages.append(
                     {"role": "assistant", "content": error_message}
                 )
+                st.rerun()
 
 
 def render_main_chat():

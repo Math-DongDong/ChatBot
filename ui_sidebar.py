@@ -23,8 +23,8 @@ def get_preview_html_source(messages: list, summary_html: str | None = None) -> 
 
 
 def has_summary_content(messages: list) -> bool:
-    """요약 버튼이 활성화될 수 있는지 판단한다. (항상 활성화)"""
-    return True
+    """첫 질문에 대한 답변이 완료되어 요약 가능한 상태인지 판단한다."""
+    return any(msg.get("role") == "assistant" for msg in messages)
 
 
 @st.dialog("현재 적용된 System Instructions", width="large")
@@ -180,7 +180,9 @@ def _render_summary_export_section(feature: dict):
 
     if st.button(
         "✨ 대화 내용 HTML로 요약하기",
+        disabled=not has_messages,
         use_container_width=True,
+        help=None if has_messages else "첫 질문에 대한 답변이 완료된 후 요약할 수 있습니다.",
     ):
         summarize_prompt_file = feature.get("summarize_prompt_file", "")
         summarize_prompt = load_prompt(summarize_prompt_file) if summarize_prompt_file else ""
@@ -212,6 +214,7 @@ def _render_summary_export_section(feature: dict):
             else:
                 st.session_state.summary_html = html_code
                 st.success("HTML 문서가 생성되었습니다! 아래에서 확인하고 내려받을 수 있습니다.")
+                st.rerun()
 
     summary_html = st.session_state.get("summary_html")
     if summary_html:

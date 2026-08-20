@@ -147,8 +147,8 @@ def _render_html_preview_section():
         """
         components.html(preview_btn_html, height=50)
 
-        download_label = "📥 수업 설계 HTML 내려받기" if st.session_state.get("summary_html") else "📥 HTML 코드 내려받기"
-        download_filename = "수업설계_요약.html" if st.session_state.get("summary_html") else "index.html"
+        download_label = "📥 대화 내용 HTML 내려받기" if st.session_state.get("summary_html") else "📥 HTML 코드 내려받기"
+        download_filename = "대화_요약.html" if st.session_state.get("summary_html") else "index.html"
         st.download_button(
             label=download_label,
             data=preview_html,
@@ -179,7 +179,7 @@ def _render_summary_export_section(feature: dict):
     summary_html = st.session_state.get("summary_html")
 
     if st.button(
-        "✨ 수업 설계 내용 HTML로 요약",
+        "✨ 대화 내용 HTML로 요약",
         use_container_width=True,
         disabled=not has_messages,
         help="대화 내용이 없으면 비활성화됩니다." if not has_messages else None,
@@ -250,26 +250,26 @@ def _render_summary_export_section(feature: dict):
             }} else {{
                 alert('팝업이 차단되었습니다. 브라우저 설정에서 팝업을 허용해주세요.');
             }}
-        ">🌐 수업 설계 HTML 미리보기</button>
+        ">🌐 대화 내용 HTML 미리보기</button>
         """
         components.html(preview_btn_html, height=50)
 
         st.download_button(
-            label="📥 수업 설계 HTML 내려받기",
+            label="📥 대화 내용 HTML 내려받기",
             data=summary_html,
-            file_name="수업설계_요약.html",
+            file_name="대화_요약.html",
             mime="text/html",
             use_container_width=True,
         )
     else:
         st.button(
-            "🌐 수업 설계 HTML 미리보기",
+            "🌐 대화 내용 HTML 미리보기",
             disabled=True,
             use_container_width=True,
             help="요약 버튼을 먼저 눌러주세요.",
         )
         st.button(
-            "📥 수업 설계 HTML 내려받기",
+            "📥 대화 내용 HTML 내려받기",
             disabled=True,
             use_container_width=True,
             help="요약 버튼을 먼저 눌러주세요.",

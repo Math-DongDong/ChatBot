@@ -9,7 +9,7 @@ st.set_page_config(
     page_title="동동봇",
     page_icon="./images/동동이.PNG",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # --- 모듈 임포트 ---

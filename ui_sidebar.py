@@ -44,7 +44,6 @@ def show_deploy_guide_modal(guide_file: str):
     content = load_prompt(guide_file)
     if content:
         st.markdown(content)
-        render_copy_button(content)
     else:
         st.info("배포 가이드 파일을 찾을 수 없습니다.")
 

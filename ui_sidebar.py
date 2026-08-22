@@ -38,7 +38,7 @@ def show_system_instructions_modal():
         st.info("현재 모델에 적용된 특별한 지시문이 없습니다.")
 
 
-@st.dialog("🚀 배포 가이드", width="large")
+@st.dialog(width="large")
 def show_deploy_guide_modal(guide_file: str):
     """배포 가이드 확인 모달 다이얼로그"""
     content = load_prompt(guide_file)
@@ -289,6 +289,7 @@ def _render_summary_export_section(feature: dict):
 
 def _render_deploy_guide_section(feature: dict):
     """배포 가이드 섹션 렌더링"""
+    st.subheader("🚀 웹 앱 배포 가이드")
     guide_file = feature.get("guide_file", "appscriptguide.txt")
     if st.button("📖 배포 가이드 확인", use_container_width=True):
         show_deploy_guide_modal(guide_file)

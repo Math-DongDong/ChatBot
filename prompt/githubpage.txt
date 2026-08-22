@@ -82,6 +82,6 @@
 
 ## 🔗 참고 링크
 화면 캡처를 포함한 더 자세한 배포 과정과 개발 팁들은 아래 블로그 포스팅에서 확인하실 수 있습니다.
-* **자세히 보기:** 
-[깃허브 페이지로 웹 페이지 배포하기](https://blog.naver.com/math_dongdong/224017542080)
-[깃허브 코드스페이스에서 코파일럿 활용하기](https://blog.naver.com/math_dongdong/224013142712)
+* **자세히 보기** 
+  *[깃허브 페이지로 웹 페이지 배포하기](https://blog.naver.com/math_dongdong/224017542080)
+  *[깃허브 코드스페이스에서 코파일럿 활용하기](https://blog.naver.com/math_dongdong/224013142712)

@@ -38,7 +38,7 @@ def show_system_instructions_modal():
         st.info("현재 모델에 적용된 특별한 지시문이 없습니다.")
 
 
-@st.dialog("",width="large")
+@st.dialog("🚀 구글 앱스스크립트(GAS) 웹 앱 배포 가이드",width="large")
 def show_deploy_guide_modal(guide_file: str):
     """배포 가이드 확인 모달 다이얼로그"""
     content = load_prompt(guide_file)

@@ -38,9 +38,19 @@ def show_system_instructions_modal():
         st.info("현재 모델에 적용된 특별한 지시문이 없습니다.")
 
 
-@st.dialog("🚀 구글 앱스스크립트(GAS) 웹 앱 배포 가이드",width="large")
-def show_deploy_guide_modal(guide_file: str):
-    """배포 가이드 확인 모달 다이얼로그"""
+@st.dialog("🚀 깃허브 페이지(GitHub Pages) 웹사이트 배포 가이드", width="large")
+def show_github_deploy_guide_modal(guide_file: str):
+    """깃허브 배포 가이드 확인 모달 다이얼로그"""
+    content = load_prompt(guide_file)
+    if content:
+        st.markdown(content)
+    else:
+        st.info("배포 가이드 파일을 찾을 수 없습니다.")
+
+
+@st.dialog("🚀 구글 앱스스크립트(GAS) 웹 앱 배포 가이드", width="large")
+def show_appscript_deploy_guide_modal(guide_file: str):
+    """구글 앱스스크립트 배포 가이드 확인 모달 다이얼로그"""
     content = load_prompt(guide_file)
     if content:
         st.markdown(content)
@@ -289,10 +299,14 @@ def _render_summary_export_section(feature: dict):
 
 def _render_deploy_guide_section(feature: dict):
     """배포 가이드 섹션 렌더링"""
-    st.subheader("🚀 웹 앱 배포 가이드")
-    guide_file = feature.get("guide_file", "appscriptguide.txt")
-    if st.button("📖 배포 가이드 확인", use_container_width=True):
-        show_deploy_guide_modal(guide_file)
+    st.subheader("🚀 배포 가이드")
+    guide_file = feature.get("guide_file", "")
+    btn_label = feature.get("guide_button_label", "📖 배포 가이드 확인")
+    if st.button(btn_label, use_container_width=True):
+        if guide_file == "githubpage.txt":
+            show_github_deploy_guide_modal(guide_file)
+        else:
+            show_appscript_deploy_guide_modal(guide_file)
 
 
 def render_sidebar():

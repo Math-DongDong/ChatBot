@@ -38,6 +38,17 @@ def show_system_instructions_modal():
         st.info("현재 모델에 적용된 특별한 지시문이 없습니다.")
 
 
+@st.dialog("🚀 배포 가이드", width="large")
+def show_deploy_guide_modal(guide_file: str):
+    """배포 가이드 확인 모달 다이얼로그"""
+    content = load_prompt(guide_file)
+    if content:
+        st.markdown(content)
+        render_copy_button(content)
+    else:
+        st.info("배포 가이드 파일을 찾을 수 없습니다.")
+
+
 def _render_api_key_section(current_model: str, feature: dict):
     """API 키 입력 섹션 렌더링"""
     feature_type = feature.get("type", "free")
@@ -277,6 +288,14 @@ def _render_summary_export_section(feature: dict):
         )
 
 
+def _render_deploy_guide_section(feature: dict):
+    """배포 가이드 섹션 렌더링"""
+    st.subheader("🚀 웹 앱 배포 가이드")
+    guide_file = feature.get("guide_file", "appscriptguide.txt")
+    if st.button("📖 배포 가이드 확인", use_container_width=True):
+        show_deploy_guide_modal(guide_file)
+
+
 def render_sidebar():
     """사이드바 전체 렌더링"""
     with st.sidebar:
@@ -294,3 +313,8 @@ def render_sidebar():
         # 대화 요약 내보내기는 수학수업 기능에서 요약/미리보기/다운로드를 연속 배치
         if feature.get("has_summary_export", False):
             _render_summary_export_section(feature)
+
+        # 배포 가이드 파일이 매핑된 기능
+        if feature.get("guide_file"):
+            _render_deploy_guide_section(feature)
+

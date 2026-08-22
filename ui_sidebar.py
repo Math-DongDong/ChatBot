@@ -290,7 +290,6 @@ def _render_summary_export_section(feature: dict):
 
 def _render_deploy_guide_section(feature: dict):
     """배포 가이드 섹션 렌더링"""
-    st.subheader("🚀 웹 앱 배포 가이드")
     guide_file = feature.get("guide_file", "appscriptguide.txt")
     if st.button("📖 배포 가이드 확인", use_container_width=True):
         show_deploy_guide_modal(guide_file)

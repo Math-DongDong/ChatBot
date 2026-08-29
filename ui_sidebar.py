@@ -227,6 +227,8 @@ def _render_summary_export_section(feature: dict):
                     summarize_prompt=summarize_prompt,
                     api_key=api_key,
                     model_name=model_name,
+                    # 대화 체인이 살아 있으면 대화 전문 재전송 없이 요약 (만료 시 내부에서 stateless 폴백)
+                    previous_interaction_id=st.session_state.get("last_interaction_id"),
                 )
 
             if error_msg:
@@ -330,4 +332,3 @@ def render_sidebar():
         # 배포 가이드 파일이 매핑된 기능
         if feature.get("guide_file"):
             _render_deploy_guide_section(feature)
-

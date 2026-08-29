@@ -20,6 +20,8 @@ def init_session_state():
         "active_project_type": None,
         "active_model_label": None,
         "summary_html": None,
+        # Interactions API 대화 체인: 직전 턴의 interaction id (None이면 새 대화)
+        "last_interaction_id": None,
     }
     for key, default_value in defaults.items():
         if key not in st.session_state:
@@ -36,3 +38,4 @@ def reset_session_for_new_chat():
     st.session_state.gemini_client = None
     st.session_state.messages = []
     st.session_state.summary_html = None
+    st.session_state.last_interaction_id = None

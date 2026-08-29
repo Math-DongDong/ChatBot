@@ -23,7 +23,11 @@ def load_api_key_from_secrets(password: str) -> tuple[str | None, str | None]:
 
 
 def auto_apply_system_instructions_on_change():
-    """사용자가 텍스트 영역에 지시문을 입력할 때 감지하는 콜백"""
+    """사용자가 텍스트 영역에 지시문을 입력할 때 감지하는 콜백
+
+    지시문은 Interactions API에서 매 턴 다시 전달되므로,
+    대화 체인(last_interaction_id)은 유지한 채 다음 메시지부터 새 지시문이 적용된다.
+    """
     new_instructions = st.session_state.get("system_instructions_input", "")
     st.session_state.system_instructions = new_instructions
     st.session_state.chat_session = None
@@ -35,7 +39,11 @@ def auto_apply_system_instructions_on_change():
 
 
 def auto_apply_api_key_on_change():
-    """API 키 입력 변경 시 검증 및 적용하는 콜백"""
+    """API 키 입력 변경 시 검증 및 적용하는 콜백
+
+    키가 바뀌면 다른 프로젝트의 interaction id는 사용할 수 없으므로
+    대화 체인(last_interaction_id)도 함께 초기화한다.
+    """
     entered_password = st.session_state.get("gemini_api_key_input_sidebar", "")
     st.session_state.api_key_error_text = None
 
@@ -49,6 +57,7 @@ def auto_apply_api_key_on_change():
             st.session_state.gemini_client = None
             st.session_state.messages = []
             st.session_state.summary_html = None
+            st.session_state.last_interaction_id = None
         return
 
     api_key, error_msg = load_api_key_from_secrets(entered_password)
@@ -61,6 +70,7 @@ def auto_apply_api_key_on_change():
         st.session_state.gemini_client = None
         st.session_state.messages = []
         st.session_state.summary_html = None
+        st.session_state.last_interaction_id = None
         return
 
     if st.session_state.get(
@@ -75,6 +85,7 @@ def auto_apply_api_key_on_change():
         st.session_state.gemini_client = None
         st.session_state.messages = []
         st.session_state.summary_html = None
+        st.session_state.last_interaction_id = None
         st.toast("✅ API 키가 성공적으로 적용되었습니다! 새 대화를 시작합니다.")
     except Exception as e:
         st.session_state.api_key_configured = False
@@ -86,14 +97,20 @@ def auto_apply_api_key_on_change():
         st.session_state.gemini_client = None
         st.session_state.messages = []
         st.session_state.summary_html = None
+        st.session_state.last_interaction_id = None
 
 
 def reset_chat_session_on_model_change():
-    """모델 변경 시 세션 초기화 및 지시문 자동 적용 콜백"""
+    """기능(모델) 변경 시 새 대화 시작 및 지시문 자동 적용 콜백
+
+    다른 기능으로 바꾸는 순간이 곧 새 대화의 시작이므로
+    대화 체인(last_interaction_id)을 여기서 초기화한다.
+    """
     st.session_state.chat_session = None
     st.session_state.gemini_client = None
     st.session_state.messages = []
     st.session_state.summary_html = None
+    st.session_state.last_interaction_id = None
 
     selected_model = st.session_state.selected_gemini_model
 

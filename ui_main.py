@@ -22,9 +22,11 @@ def _render_header():
         st.title("💬 동동봇")
     with col2:
         st.markdown("<div style='height: 1.8rem'></div>", unsafe_allow_html=True)
-        if st.button("🔄 새 채팅 시작", use_container_width=True):
-            reset_session_for_new_chat()
-            st.rerun()
+        st.button(
+            "🔄 새 채팅 시작",
+            use_container_width=True,
+            on_click=reset_session_for_new_chat,
+        )
     with col3:
         current_model = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0] if MODEL_OPTIONS else "")
         try:

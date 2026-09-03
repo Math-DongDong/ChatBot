@@ -26,9 +26,16 @@ def _render_header():
             reset_session_for_new_chat()
             st.rerun()
     with col3:
+        current_model = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0] if MODEL_OPTIONS else "")
+        try:
+            default_index = MODEL_OPTIONS.index(current_model)
+        except ValueError:
+            default_index = 0
+
         st.selectbox(
             "기능 선택",
             options=MODEL_OPTIONS,
+            index=default_index,
             key="selected_gemini_model",
             help="사용할 봇의 기능을 선택하세요.",
             on_change=reset_chat_session_on_model_change,

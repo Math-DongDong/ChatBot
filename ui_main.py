@@ -17,7 +17,7 @@ from utils import process_uploaded_files
 
 def _render_header():
     """타이틀 + 새 채팅 버튼 + 기능 선택 드롭다운 렌더링"""
-    col1, col2, col3 = st.columns([4, 0.7, 1])
+    col1, col2, col3 = st.columns([4, 1, 1])
     with col1:
         st.title("💬 동동봇")
     with col2:

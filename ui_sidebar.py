@@ -236,7 +236,6 @@ def _render_summary_export_section(feature: dict):
             else:
                 st.session_state.summary_html = html_code
                 st.success("HTML 문서가 생성되었습니다! 아래에서 확인하고 내려받을 수 있습니다.")
-                st.rerun()
 
     summary_html = st.session_state.get("summary_html")
     if summary_html:

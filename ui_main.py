@@ -22,7 +22,7 @@ def _render_header():
         st.title("💬 동동봇")
     with col2:
         st.markdown("<div style='height: 1.8rem'></div>", unsafe_allow_html=True)
-        if st.button("🔄 새 채팅", use_container_width=True):
+        if st.button("🔄 새 채팅 시작", use_container_width=True):
             reset_session_for_new_chat()
             st.rerun()
     with col3:

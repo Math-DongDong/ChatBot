@@ -81,7 +81,12 @@ def process_uploaded_files(staged_files: list) -> tuple[list, list[Image.Image],
     pil_images_for_display = []
     uploaded_filenames = []
 
+    if not isinstance(staged_files, list):
+        staged_files = [staged_files]
+
     for uploaded_file in staged_files:
+        if not hasattr(uploaded_file, "name"):
+            continue
         uploaded_filenames.append(uploaded_file.name)
         uploaded_file.seek(0)
 

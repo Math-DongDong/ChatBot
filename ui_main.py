@@ -10,16 +10,22 @@ from PIL import Image
 
 from config import MODEL_OPTIONS, MODEL_NAME_MAP, get_feature, logger
 from callbacks import reset_chat_session_on_model_change
+from session import reset_session_for_new_chat
 from chat_engine import initialize_chat_session, send_chat_response
 from utils import process_uploaded_files
 
 
 def _render_header():
-    """타이틀 + 기능 선택 드롭다운 렌더링"""
-    col1, col2 = st.columns([4, 1])
+    """타이틀 + 새 채팅 버튼 + 기능 선택 드롭다운 렌더링"""
+    col1, col2, col3 = st.columns([4, 0.7, 1])
     with col1:
         st.title("💬 동동봇")
     with col2:
+        st.markdown("<div style='height: 1.8rem'></div>", unsafe_allow_html=True)
+        if st.button("🔄 새 채팅", use_container_width=True):
+            reset_session_for_new_chat()
+            st.rerun()
+    with col3:
         st.selectbox(
             "기능 선택",
             options=MODEL_OPTIONS,

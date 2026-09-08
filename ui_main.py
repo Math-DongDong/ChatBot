@@ -17,13 +17,13 @@ from utils import process_uploaded_files
 
 def _render_header():
     """타이틀 + 새 채팅 버튼 + 기능 선택 드롭다운 렌더링"""
-    col1, col2, col3 = st.columns([4, 1, 1])
+    col1, col2, col3 = st.columns([3, 1, 1])
     with col1:
         st.title("💬 동동봇")
     with col2:
         st.markdown("<div style='height: 1.8rem'></div>", unsafe_allow_html=True)
         st.button(
-            "🔄 새 채팅 시작",
+            "🔄 새 채팅",
             use_container_width=True,
             on_click=reset_session_for_new_chat,
         )

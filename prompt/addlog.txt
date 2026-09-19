@@ -55,12 +55,3 @@
   CloseLog
   MsgBox "작업이 완료되었습니다."
   ```
-
----
-
-## 📥 Target Source Code (작업 대상 코드)
-
-```vba
-' 여기에 변환할 기존 VBA 코드를 붙여넣으세요.
-```
-```

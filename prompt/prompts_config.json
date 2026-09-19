@@ -50,8 +50,16 @@
       "label": "Selenium VBA 로그 생성",
       "model": "gemini-3.6-flash",
       "type": "paid_or_free",
-      "prompt_file": "addlog.txt",
+      "prompt_file": "vba_addlog.txt",
       "description": "VBA 코드를 작성할 때 로그를 추가할 수 있습니다.",
+      "has_html_preview": false
+    },
+    {
+      "label": "한글문서 VBA",
+      "model": "gemini-3.6-flash",
+      "type": "paid_or_free",
+      "prompt_file": "vba_hwp.txt",
+      "description": "한글문서를 VBA를 이용해서 생성할 수 있습니다.",
       "has_html_preview": false
     }
   ]

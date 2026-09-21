@@ -82,12 +82,6 @@ Public Keys As New Selenium.Keys
 - `Sel.Wait 초` ― 표준 대기(F3로 크롬 종료 후 전체 중단 가능)
   - ★ Sleep·Application.Wait·M.Wait 대신 항상 이것
 
-### Sel 모듈 ― 진행 로그창
-
-- `Sel.OpenLog` ― 화면 위 로그창 열기(작업 시작 시)
-- `Sel.AddLog "문구"` ― 로그창에 진행 상황 한 줄 기록
-- `Sel.CloseLog` ― 로그창 닫기(작업 종료 시)
-
 ### 허용 네이티브 API ― 이동·탐색
 
 - `Driver.Get "URL"` / `Driver.Refresh` ― 페이지 이동/새로고침

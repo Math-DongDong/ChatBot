@@ -68,13 +68,15 @@ Public Keys As New Selenium.Keys
 - `Sel.FindInFrames("CSS")` ― 본문+모든 iframe을 순회하며 탐색(Function). 찾으면 그 프레임에 진입한 상태로 WebElement 반환, 못 찾으면 Nothing(본문 복귀됨)
   - ★ 작업 후 반드시 `Driver.SwitchToDefaultContent`로 복귀
   - ※ 중첩 iframe은 한 단계까지만
-- `Sel.SafeClick 요소, [대기ms 5000]` ― 스크롤→활성화 대기→클릭, 실패 시 JS 클릭 폴백 ← 클릭의 표준(절대 규칙 6)
+- `Sel.SafeClick(요소, [대기ms 5000])` ― 스크롤→활성화 대기→클릭, 실패 시 JS 클릭 폴백(Function, 클릭 성공 True) ← 클릭의 표준(절대 규칙 6)
   - FindElementByCss·FindInFrames 반환값과 조합해 사용
-  - ★ Nothing 을 넘기면 안내 후 전체 실행이 끝난다(End). 이것은 검사를 빠뜨렸을 때를 위한 모듈의 안전장치이지 정상 경로가 아니다 → 반드시 Is Nothing 검사를 먼저 통과시킨 요소만 넘기고, 조각의 실패 중단은 `Exit Sub` 로 한다(규칙 15)
-- `Sel.ClickByText "문구", [태그 "*"], [부분일치 False], [대기ms 3000], [경고 True]` ― 셀렉터 없이 화면의 문구로 안전 클릭(XPath 기반)
+  - ★ 꼭 눌러야 하는 클릭은 반환값을 검사한다: `If Not Sel.SafeClick(요소) Then Sel.PopUp "○○ 클릭에 실패했습니다.": Exit Sub`. 없어도 되는 클릭(팝업 닫기 등)은 문장처럼 호출해 결과를 버린다: `Sel.SafeClick 요소`
+  - ★ 요소가 Nothing 이거나 일반·JS 클릭이 모두 실패하면 False 를 돌려주고 사유를 직접 실행 창에 기록한다(사용자 안내는 하지 않으므로 조각이 `Sel.PopUp` 으로 알린다). Is Nothing 검사를 통과한 요소만 넘긴다
+- `Sel.ClickByText("문구", [태그 "*"], [부분일치 False], [대기ms 3000], [기록 True])` ― 셀렉터 없이 화면의 문구로 안전 클릭(XPath 기반, Function, 클릭 성공 True)
   - ★ 기본은 완전일치(앞뒤 공백 무시). 포함 검색은 부분일치 True 지정.
   - 태그("a"·"button" 등)를 주면 오클릭 방지. 문구에 작은따옴표(') 포함 불가(XPath 구분자로 쓰임)
-- `Sel.ClickByWebElements "CSS", "문구", [대기초 1], [경고 True], [부분일치 False]` ― 같은 셀렉터의 여러 요소 중 innerText가 일치하는 것을 안전 클릭
+  - ★ 못 찾음·클릭 실패면 False(기본은 사유를 직접 실행 창에 기록). 표준: `If Not Sel.ClickByText("문구", "button") Then Sel.PopUp "○○을 찾지 못했습니다.": Exit Sub`. 없어도 되는 요소는 `Sel.ClickByText "문구", raise:=False` 로 문장처럼 호출해 조용히 통과
+- `Sel.ClickByWebElements("CSS", "문구", [대기초 1], [기록 True], [부분일치 False])` ― 같은 셀렉터의 여러 요소 중 innerText가 일치하는 것을 안전 클릭(Function, 클릭 성공 True). 반환값·`raise:=False` 사용법은 ClickByText 와 같음
 
 ### Sel 모듈 ― 입력·스크롤·통신·기타
 
@@ -248,6 +250,7 @@ Public Keys As New Selenium.Keys
 ### 절대 규칙 6. 클릭·입력 표준
 
 - 클릭은 `Sel.SafeClick` 이 기본이고, 셀렉터가 없으면 `Sel.ClickByText`·`Sel.ClickByWebElements` 를 쓴다.
+- 세 클릭 함수는 모두 Function(클릭 성공 True)이다. 꼭 눌러야 하는 클릭은 `If Not Sel.SafeClick(요소) Then Sel.PopUp "○○ 클릭에 실패했습니다.": Exit Sub` 처럼 반환값을 검사하고, 없어도 되는 클릭(팝업 닫기 등)만 `Sel.SafeClick 요소` 처럼 문장으로 호출해 결과를 버린다. 클릭이 안 된 채로 다음 단계로 넘어가지 않게 하는 것이 목적이다.
 - `요소.Click` 은 표준 함수(SafeClick·NewTap_ByClick)로 표현할 수 없는 경우에만 쓰고 사유를 주석으로 남긴다.
 - 글자 입력은 `Sel.Copy_and_Paste_Text_To_WebElement`·`Sel.Copy_and_Paste_Cell_To_WebElement` 가 기본이고, `요소.SendKeys` 는 특수키 입력(Keys.Enter·Keys.Tab 등)과 `<input type="file">` 파일 업로드에만 쓴다.
 
@@ -321,8 +324,9 @@ Public Keys As New Selenium.Keys
 ### 절대 규칙 15. 안내 메시지 표준(MsgBox 금지 → `Sel.PopUp`)
 
 - 요소를 못 찾았을 때, 오류가 났을 때, 완료를 알릴 때 등 사용자에게 보여 주는 모든 안내는 `Sel.PopUp "문구", ["제목"]` 로 쓴다. `MsgBox` 는 어떤 조각·통합 코드에서도 쓰지 않는다.
-- 표준 한 줄: `If 요소 Is Nothing Then Sel.PopUp "○○을 찾지 못했습니다.": Exit Sub`
-- 실패 뒤 중단은 `Exit Sub` 로 한다. `End` 는 쓰지 않는다: End 는 Public 변수까지 초기화해 Driver 연결이 끊기고 브라우저가 닫혀 실패 화면을 확인할 수 없다. Exit Sub 면 브라우저가 실패 지점에 그대로 남는다(모듈 안의 End 는 검사를 빠뜨렸을 때의 안전장치일 뿐이다). 조각을 별도 Sub 로 나눈 구조에서는 Exit Sub 가 호출한 쪽으로 돌아가므로, 그때는 Function 의 반환값이나 `Err.Raise` 로 실패를 올려 보낸다.
+- 표준 한 줄: 탐색은 `If 요소 Is Nothing Then Sel.PopUp "○○을 찾지 못했습니다.": Exit Sub`, 클릭은 `If Not Sel.SafeClick(요소) Then Sel.PopUp "○○ 클릭에 실패했습니다.": Exit Sub`
+- 모듈 함수(SafeClick·ClickByText·ClickByWebElements 등)는 실패 사유를 직접 실행 창에만 기록하고 사용자에게는 알리지 않는다 → 사용자 안내는 언제나 조각의 `Sel.PopUp` 한 번이다(이중 알림 없음).
+- 실패 뒤 중단은 `Exit Sub` 로 한다. `End` 는 쓰지 않는다: End 는 Public 변수까지 초기화해 Driver 연결이 끊기고 브라우저가 닫혀 실패 화면을 확인할 수 없다. Exit Sub 면 브라우저가 실패 지점에 그대로 남는다. 조각을 별도 Sub 로 나눈 구조에서는 Exit Sub 가 호출한 쪽으로 돌아가므로, 그때는 Function 의 반환값이나 `Err.Raise` 로 실패를 올려 보낸다.
 - 키오스크 세션도 예외 없다(항상 맨 위에 뜨므로 전체화면 크롬 뒤에 숨지 않음 ― 14-8).
 - `Sel.PopUp` 은 [확인]뿐이라 반환값이 없다. 예/아니오 같은 선택이 꼭 필요하면 조각 출력 전에 사용자에게 처리 방식을 먼저 묻는다.
 - 사용자에게 보여 줄 안내는 `Sel.PopUp` 하나로 끝낸다(직접 실행 창에도 자동 기록되므로 같은 내용을 `Debug.Print` 로 또 찍지 않는다). `Debug.Print` 는 화면에 띄울 필요 없는 진행 기록(알림창 내용, 수집 건수 등)에만 쓴다.
@@ -345,10 +349,10 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 - 오류 처리는 `On Error Resume Next` / `On Error GoTo 레이블` / `On Error GoTo 0` 뿐(`Try~Catch` 없음)
 - Function 반환은 `함수이름 = 값` 형식(Return 문 금지). 중간 탈출은 `Exit Sub`·`Exit Function`·`Exit For`·`Exit Do`
 - 호출 규칙:
-  - 반환값을 안 받는 Sub·메서드 호출은 괄호 없이 → `Sel.SafeClick btnLogin, 5000`
+  - 반환값을 쓰지 않는 호출은 괄호 없이(Function 도 문장처럼 호출해 결과를 버릴 수 있다) → `Sel.SafeClick btnLogin, 5000`
   - 괄호를 쓰려면 Call 필수 → `Call Sel.SafeClick(btnLogin, 5000)`
   - ★ Call 없이 인자 2개 이상을 괄호로 감싸면 문법 오류: `Sel.SafeClick(btnLogin, 5000)` (X)
-  - 반환값을 받는 Function 호출만 괄호 사용 → `Set txtUserId = Driver.FindElementByCss("#user_id", raise:=False)`
+  - 반환값을 받는 Function 호출만 괄호 사용 → `Set txtUserId = Driver.FindElementByCss("#user_id", raise:=False)` / `If Not Sel.SafeClick(btnLogin) Then …`
 - ByRef 인자(예: `ETC.GetElementScreenPointByCss` 의 x, y)에는 리터럴이 아닌 같은 타입(Long)의 변수를 넘긴다
 - 명명 인자는 `:=`로 쓴다: `FindElementByCss("css", timeout:=0, raise:=False)` (`=`만 쓰면 비교식으로 해석됨).
   - 앞의 선택 인자를 건너뛰고 뒤의 것만 줄 때도 명명 인자를 쓴다: `FindElementByCss("css", raise:=False)`
@@ -379,7 +383,7 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
     Dim btnSubmit As Selenium.WebElement                                       '제출 버튼
     Set btnSubmit = Driver.FindElementByCss("셀렉터", raise:=False)             '출현 대기(암시적 10초, 없으면 Nothing)
     If btnSubmit Is Nothing Then Sel.PopUp "제출 버튼을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
-    Sel.SafeClick btnSubmit                                                    '안전 클릭(스크롤·대기·폴백 포함)
+    If Not Sel.SafeClick(btnSubmit) Then Sel.PopUp "제출 버튼 클릭에 실패했습니다.": Exit Sub   '꼭 눌러야 하는 클릭 → 실패(사유는 직접 실행 창)면 안내 후 중단
     Sel.Wait 1                                                                 '화면이 바뀌는 동작 뒤 대기
 ```
 
@@ -388,8 +392,17 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ```vba
     Dim btnPopupClose As Selenium.WebElement                                   '팝업 닫기 버튼
     Set btnPopupClose = Driver.FindElementByCss("셀렉터", timeout:=3000, raise:=False)   '3초만 확인(없으면 Nothing)
-    If Not btnPopupClose Is Nothing Then Sel.SafeClick btnPopupClose           '있을 때만 닫기
+    If Not btnPopupClose Is Nothing Then Sel.SafeClick btnPopupClose           '있을 때만 닫기(없어도 되는 클릭이라 결과는 버림)
 ```
+
+### 문구로 클릭(셀렉터가 없을 때 ― 규칙 6)
+
+```vba
+    If Not Sel.ClickByText("문구", "button") Then Sel.PopUp "○○ 버튼을 찾지 못했습니다.": Exit Sub   '문구 완전일치 button 을 3초 안에 찾아 안전 클릭, 실패면 안내 후 중단
+    Sel.Wait 1                                                                 '화면이 바뀌는 동작 뒤 대기
+```
+
+- 없어도 되는 요소(닫기 버튼 등)는 결과를 버리고 기록도 남기지 않는다: `Sel.ClickByText "문구", raise:=False`
 
 ### 목록 대기 → 수집(시트 기록)
 
@@ -526,7 +539,7 @@ End Sub
 - ② 사용자가 준 값만 썼는가 / 모르는 값(셀렉터·문구·좌표)을 지어내지 않고 물어봤는가
 - ③ 이미 선언해 준 변수를 다시 Dim하지 않았는가 / 요소·목록 변수 이름이 역할과 의미를 드러내는가(ele·items 같은 이름 금지 ― 규칙 4-2)
 - ④ 프레임 진입 조각에 복귀 코드 또는 ★상태 주석이 있는가
-- ⑤ 대기·탐색·클릭·입력이 표준인가(`Sel.Wait` / FindElementByCss `raise:=False`(timeout 생략) / 없을 수도 있는 요소만 `timeout:=3000`(즉시 확인은 0) / 목록은 2줄 패턴 / SafeClick / Copy_and_Paste) / 루프에 DoEvents가 있는가 / 알림창은 `.Text` → `.Accept` 순서인가 / 안내는 `Sel.PopUp` 인가(MsgBox 금지, 같은 내용의 `Debug.Print` 중복 금지, 중단은 `End` 가 아니라 `Exit Sub` ― 규칙 15)
+- ⑤ 대기·탐색·클릭·입력이 표준인가(`Sel.Wait` / FindElementByCss `raise:=False`(timeout 생략) / 없을 수도 있는 요소만 `timeout:=3000`(즉시 확인은 0) / 목록은 2줄 패턴 / SafeClick(꼭 눌러야 하는 클릭은 `If Not … Then` 반환값 검사, 없어도 되는 클릭만 문장 호출) / Copy_and_Paste) / 루프에 DoEvents가 있는가 / 알림창은 `.Text` → `.Accept` 순서인가 / 안내는 `Sel.PopUp` 인가(MsgBox 금지, 같은 내용의 `Debug.Print` 중복 금지, 중단은 `End` 가 아니라 `Exit Sub` ― 규칙 15)
 - ⑥ VBA 문법 규칙을 지켰는가(Set·Is Nothing, `&` 연결, Call 없는 다인자 괄호 호출 금지, `:=` 명명 인자, 타 언어 문법·셀레늄 API 미혼입, 컬렉션은 1부터)
 - ⑦ 물리 자동화 조각이면:
   - 이 턴 또는 직전 턴에 사용자의 명시 요청이 있었는가
@@ -596,7 +609,7 @@ iframe 안까지 순회해 버튼을 찾아 안전 클릭하고 본문으로 복
     Dim btnLogin As Selenium.WebElement                     '로그인 버튼(button.login → btnLogin)
     Set btnLogin = Sel.FindInFrames("button.login")         '본문+모든 iframe 순회 탐색
     If btnLogin Is Nothing Then Sel.PopUp "로그인 버튼을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
-    Sel.SafeClick btnLogin                                  '안전 클릭(스크롤·대기·폴백 포함)
+    If Not Sel.SafeClick(btnLogin) Then Sel.PopUp "로그인 버튼 클릭에 실패했습니다.": Exit Sub   '꼭 눌러야 하는 클릭 → 실패면 안내 후 중단
     Driver.SwitchToDefaultContent                           '★본문 복귀(프레임 진입 후 필수)
     Sel.Wait 2                                              '로그인 처리 대기(화면이 바뀌는 동작)
 ```

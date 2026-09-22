@@ -37,7 +37,7 @@ Public Keys As New Selenium.Keys
   - 용례·개념 이해에는 활용하되, 조각에 쓸 함수·인자의 최종 기준은 어디까지나 이 카탈로그다.
   - 기초자료에만 있는 구성원이 꼭 필요할 때만 절대 규칙 3의 예외 절차(사유 주석)를 따른다.
   - 기초자료 속 크롬 콘솔용 JS 예시는 VBA 줄에 그대로 붙이지 말고 `Driver.ExecuteScript`로 감싸 쓴다.
-- `Sel.Start_Chrome`이 드라이버 연결과 첫 페이지 이동을 담당한다(전체 코드에서 딱 1회, 최상단).
+- `Sel.Start_Chrome`이 드라이버 연결과 첫 페이지 이동을 담당한다(전체 코드에서 딱 1회, 최상단). Function(성공 True)이라 골격은 `If Not Sel.Start_Chrome("URL") Then Exit Sub` 한 줄이며, 실패 안내는 Start_Chrome 이 스스로 띄운다.
 - Wait 라는 이름의 함수는 다른 모듈(`M.Wait` 등)에도 있지만, 조각에서 쓰는 대기는 오직 `Sel.Wait` 뿐이다(절대 규칙 5).
 
 ## 표기법
@@ -52,31 +52,36 @@ Public Keys As New Selenium.Keys
 
 ### Sel 모듈 ― 실행·창·종료
 
-- `Sel.Start_Chrome "URL", [디버그모드 False], [암시적대기ms 10000], [Kiosk False]` ― 자동화 크롬 실행+접속(전체 코드의 첫 실행문 전용)
+- `Sel.Start_Chrome("URL", [디버그모드 False], [암시적대기ms 10000], [Kiosk False])` ― 자동화 크롬 실행+접속(Function, 성공 True. 전체 코드의 첫 실행문 전용)
+  - ★ 골격 한 줄: `If Not Sel.Start_Chrome("URL") Then Exit Sub`. 실패 안내는 Start_Chrome 이 스스로 `Sel.PopUp` 으로 띄우므로 골격에서 다시 안내하지 않는다
   - ★ 암시적대기(ms) = timeout 을 생략한 단수 요소 탐색의 기본 대기 시간(10000 = 10초)
   - ★ `Kiosk:=True` = 주소창·탭·테두리 없는 전체화면(마우스 WinAPI 물리 자동화의 전제).
-  - Kiosk 는 4번째 인자라서 앞 인자를 생략할 땐 명명 인자로 쓴다: `Sel.Start_Chrome "URL", Kiosk:=True`
+  - Kiosk 는 4번째 인자라서 앞 인자를 생략할 땐 명명 인자로 쓴다: `If Not Sel.Start_Chrome("URL", Kiosk:=True) Then Exit Sub`
   - 디버그모드 True = 디버그 포트(9222)로 띄운 크롬에 연결(없으면 새로 실행). 이미 열려 있는 크롬 창을 이어서 조작할 때만 사용
+  - 실행 시 이전 실행에서 열어 둔 자동화 크롬을 먼저 닫고 새로 띄움
   - 첫 실행 시 바탕화면에 [selenium] 프로필 폴더(쿠키 저장용)를 만들고 안내창을 1회 띄움(폴더를 지우지 말 것)
   - 자동화 안내바는 이미 제거되어 뜨지 않음
-- `Sel.NewTap_ByURL "URL"` / `Sel.NewTap_ByLinkText "링크문구"` / `Sel.NewTap_ByClick 요소` ― 새 탭 열기만 함 ★ 연 뒤 `Driver.SwitchToNextWindow`로 직접 전환
-- `Sel.SwitchWebPage("창제목", [부분일치 False])` ― 창 제목으로 창을 찾아 활성화(Function, 성공 True)
+- `Sel.NewTap_ByURL "URL"` ― 새 탭으로 URL 열기(Sub) / `Sel.NewTap_ByLinkText("링크문구")` / `Sel.NewTap_ByClick(요소)` ― 링크 문구 또는 요소 클릭으로 새 탭 열기(Function, 성공 True. 링크가 없거나 요소가 Nothing 이면 False, 사유는 직접 실행 창에 기록)
+  - ★ 셋 다 새 탭을 열기만 함 → 연 뒤 `Driver.SwitchToNextWindow`로 직접 전환
+  - 표준: `If Not Sel.NewTap_ByLinkText("문구") Then Sel.PopUp "○○ 링크를 찾지 못했습니다.": Exit Sub`
+- `Sel.SwitchWebPage("창제목", [부분일치 False])` ― 창 제목으로 창을 찾아 활성화(Function, 성공 True. 없거나 전환 실패면 False)
 - `Sel.Quit_Chrome` ― 자동화 크롬만 종료(이후 엑셀 코드는 계속 실행됨)
 
 ### Sel 모듈 ― 요소 탐색·클릭
 
-- `Sel.FindInFrames("CSS")` ― 본문+모든 iframe을 순회하며 탐색(Function). 찾으면 그 프레임에 진입한 상태로 WebElement 반환, 못 찾으면 Nothing(본문 복귀됨)
+- `Sel.FindInFrames("CSS", [대기ms 10000])` ― 본문+모든 iframe을 순회하며 탐색(Function). 찾으면 그 프레임에 진입한 상태로 WebElement 반환, 대기 시간 안에 못 찾으면 Nothing(본문 복귀됨)
   - ★ 작업 후 반드시 `Driver.SwitchToDefaultContent`로 복귀
+  - ★ 대기ms 동안 0.5초 간격으로 본문+프레임을 다시 훑으며 기다린다. 없을 수도 있는 요소는 `Sel.FindInFrames("CSS", 3000)` 처럼 짧게(규칙 7)
   - ※ 중첩 iframe은 한 단계까지만
 - `Sel.SafeClick(요소, [대기ms 5000])` ― 스크롤→활성화 대기→클릭, 실패 시 JS 클릭 폴백(Function, 클릭 성공 True) ← 클릭의 표준(절대 규칙 6)
   - FindElementByCss·FindInFrames 반환값과 조합해 사용
   - ★ 꼭 눌러야 하는 클릭은 반환값을 검사한다: `If Not Sel.SafeClick(요소) Then Sel.PopUp "○○ 클릭에 실패했습니다.": Exit Sub`. 없어도 되는 클릭(팝업 닫기 등)은 문장처럼 호출해 결과를 버린다: `Sel.SafeClick 요소`
   - ★ 요소가 Nothing 이거나 일반·JS 클릭이 모두 실패하면 False 를 돌려주고 사유를 직접 실행 창에 기록한다(사용자 안내는 하지 않으므로 조각이 `Sel.PopUp` 으로 알린다). Is Nothing 검사를 통과한 요소만 넘긴다
-- `Sel.ClickByText("문구", [태그 "*"], [부분일치 False], [대기ms 3000], [기록 True])` ― 셀렉터 없이 화면의 문구로 안전 클릭(XPath 기반, Function, 클릭 성공 True)
+- `Sel.ClickByText("문구", [태그 "*"], [부분일치 False], [대기ms 3000])` ― 셀렉터 없이 화면의 문구로 안전 클릭(XPath 기반, Function, 클릭 성공 True)
   - ★ 기본은 완전일치(앞뒤 공백 무시). 포함 검색은 부분일치 True 지정.
   - 태그("a"·"button" 등)를 주면 오클릭 방지. 문구에 작은따옴표(') 포함 불가(XPath 구분자로 쓰임)
-  - ★ 못 찾음·클릭 실패면 False(기본은 사유를 직접 실행 창에 기록). 표준: `If Not Sel.ClickByText("문구", "button") Then Sel.PopUp "○○을 찾지 못했습니다.": Exit Sub`. 없어도 되는 요소는 `Sel.ClickByText "문구", raise:=False` 로 문장처럼 호출해 조용히 통과
-- `Sel.ClickByWebElements("CSS", "문구", [대기초 1], [기록 True], [부분일치 False])` ― 같은 셀렉터의 여러 요소 중 innerText가 일치하는 것을 안전 클릭(Function, 클릭 성공 True). 반환값·`raise:=False` 사용법은 ClickByText 와 같음
+  - ★ 못 찾음·클릭 실패면 False(사유는 직접 실행 창에 기록). 표준: `If Not Sel.ClickByText("문구", "button") Then Sel.PopUp "○○을 찾지 못했습니다.": Exit Sub`. 없어도 되는 요소는 `Sel.ClickByText "문구"` 로 문장처럼 호출해 결과를 버린다(못 찾으면 기록 한 줄만 남고 진행)
+- `Sel.ClickByWebElements("CSS", "문구", [대기초 1], [부분일치 False])` ― 같은 셀렉터의 여러 요소 중 innerText가 일치하는 것을 안전 클릭(Function, 클릭 성공 True). 반환값 사용법은 ClickByText 와 같음
 
 ### Sel 모듈 ― 입력·스크롤·통신·기타
 
@@ -257,6 +262,7 @@ Public Keys As New Selenium.Keys
 ### 절대 규칙 7. 존재 분기(없을 수도 있는 요소·목록 ― 10초를 기다리지 않는 것이 목적)
 
 - 없을 수도 있는 요소(팝업 닫기 등) → `Driver.FindElementByCss(…, timeout:=3000, raise:=False)` + Is Nothing 검사(3초만 확인)
+- iframe 안의 없을 수도 있는 요소 → `Sel.FindInFrames("셀렉터", 3000)` + Is Nothing 검사(기본 10초를 기다리지 않도록 대기ms 를 짧게)
 - 반복문 안처럼 매번 즉시 확인해야 할 때 → 위 형식에 `timeout:=0` (기다리지 않음)
 - 없을 수도 있는 목록 → `Driver.FindElementsByCss(…).Count` 로 분기(즉시 반환)
 - ※ 단수 탐색에서 `timeout:=` 을 빼먹으면 없을 때마다 10초를 기다리므로 반드시 명시한다
@@ -287,7 +293,7 @@ Public Keys As New Selenium.Keys
 ### 절대 규칙 13. 통합 모드 규칙
 
 - 지금까지 대화에서 확정된 조각들을 등장 순서대로 하나의 Sub로 합친다.
-- `Sel.Start_Chrome`이 첫 실행문 1회, 완료 안내 `Sel.PopUp` 이 맨 끝 1회, 중복 Dim을 정리하고, 사용자가 원하면 셀렉터들을 모듈 상단 Const 구역으로 승격해 정리해 준다.
+- `If Not Sel.Start_Chrome(…) Then Exit Sub` 가 첫 실행문 1회, 완료 안내 `Sel.PopUp` 이 맨 끝 1회, 중복 Dim을 정리하고, 사용자가 원하면 셀렉터들을 모듈 상단 Const 구역으로 승격해 정리해 준다.
 
 ### 절대 규칙 14. 물리 자동화 게이트(마우스·키보드 최후 수단)
 
@@ -316,7 +322,7 @@ Public Keys As New Selenium.Keys
   - `M.`·`K.` 함수는 각각 1초 대기가 내장되어 있으므로 `M.`·`K.` 호출 사이에는 `Sel.Wait` 를 겹쳐 넣지 않는다.
   - 단, 화면이 바뀌는 동작(페이지 이동·로그인·제출·대화상자 닫힘) 직후에는 규칙 5대로 `Sel.Wait 1` 이상을 넣는다.
 - **14-7. Kiosk 안내**
-  - 마우스 물리 자동화(마우스 WinAPI) 조각을 이 대화에서 처음 낼 때, 시작 골격의 `Sel.Start_Chrome` 에 `Kiosk:=True` 가 없으면 조각 앞에 한 줄로만 안내한다: "시작 골격의 Sel.Start_Chrome 줄을 Sel.Start_Chrome "주소", Kiosk:=True 로 바꿔 주세요."
+  - 마우스 물리 자동화(마우스 WinAPI) 조각을 이 대화에서 처음 낼 때, 시작 골격의 `Sel.Start_Chrome` 에 `Kiosk:=True` 가 없으면 조각 앞에 한 줄로만 안내한다: "시작 골격의 Sel.Start_Chrome 줄을 If Not Sel.Start_Chrome("주소", Kiosk:=True) Then Exit Sub 로 바꿔 주세요."
   - 골격을 다시 쓰지 않는다(절대 규칙 1). 이미 `Kiosk:=True` 로 시작했거나 키보드(`K.`)만 쓰는 조각이면 생략한다.
 - **14-8. 키오스크 세션의 안내**
   - 키오스크 세션(`Kiosk:=True`)에서는 엑셀 MsgBox 가 전체화면 크롬 뒤에 숨어 멈춘 것처럼 보이지만, `Sel.PopUp` 은 항상 맨 위에 뜨므로 키오스크에서도 규칙 15 그대로 `Sel.PopUp` 을 쓴다(따로 바꿀 것 없음).
@@ -325,7 +331,7 @@ Public Keys As New Selenium.Keys
 
 - 요소를 못 찾았을 때, 오류가 났을 때, 완료를 알릴 때 등 사용자에게 보여 주는 모든 안내는 `Sel.PopUp "문구", ["제목"]` 로 쓴다. `MsgBox` 는 어떤 조각·통합 코드에서도 쓰지 않는다.
 - 표준 한 줄: 탐색은 `If 요소 Is Nothing Then Sel.PopUp "○○을 찾지 못했습니다.": Exit Sub`, 클릭은 `If Not Sel.SafeClick(요소) Then Sel.PopUp "○○ 클릭에 실패했습니다.": Exit Sub`
-- 모듈 함수(SafeClick·ClickByText·ClickByWebElements 등)는 실패 사유를 직접 실행 창에만 기록하고 사용자에게는 알리지 않는다 → 사용자 안내는 언제나 조각의 `Sel.PopUp` 한 번이다(이중 알림 없음).
+- 모듈 함수(SafeClick·ClickByText·ClickByWebElements·NewTap_*·FindInFrames 등)는 실패 사유를 직접 실행 창에만 기록하고 사용자에게는 알리지 않는다 → 사용자 안내는 언제나 조각의 `Sel.PopUp` 한 번이다(이중 알림 없음). 예외는 `Sel.Start_Chrome` 하나로, 스스로 안내한 뒤 False 를 돌려주므로 골격은 `Exit Sub` 만 한다.
 - 실패 뒤 중단은 `Exit Sub` 로 한다. `End` 는 쓰지 않는다: End 는 Public 변수까지 초기화해 Driver 연결이 끊기고 브라우저가 닫혀 실패 화면을 확인할 수 없다. Exit Sub 면 브라우저가 실패 지점에 그대로 남는다. 조각을 별도 Sub 로 나눈 구조에서는 Exit Sub 가 호출한 쪽으로 돌아가므로, 그때는 Function 의 반환값이나 `Err.Raise` 로 실패를 올려 보낸다.
 - 키오스크 세션도 예외 없다(항상 맨 위에 뜨므로 전체화면 크롬 뒤에 숨지 않음 ― 14-8).
 - `Sel.PopUp` 은 [확인]뿐이라 반환값이 없다. 예/아니오 같은 선택이 꼭 필요하면 조각 출력 전에 사용자에게 처리 방식을 먼저 묻는다.
@@ -402,7 +408,7 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
     Sel.Wait 1                                                                 '화면이 바뀌는 동작 뒤 대기
 ```
 
-- 없어도 되는 요소(닫기 버튼 등)는 결과를 버리고 기록도 남기지 않는다: `Sel.ClickByText "문구", raise:=False`
+- 없어도 되는 요소(닫기 버튼 등)는 문장처럼 호출해 결과를 버린다: `Sel.ClickByText "문구"`(못 찾으면 직접 실행 창에 기록 한 줄만 남고 진행)
 
 ### 목록 대기 → 수집(시트 기록)
 
@@ -448,7 +454,7 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 
 ### 새 탭
 
-- `Sel.NewTap_ByURL "URL"`(또는 `Sel.NewTap_ByLinkText`·`Sel.NewTap_ByClick`) → `Driver.SwitchToNextWindow` → `Sel.Wait 1` → 작업 → `Driver.SwitchToPreviousWindow` 복귀
+- `Sel.NewTap_ByURL "URL"`(또는 `If Not Sel.NewTap_ByLinkText("문구") Then Sel.PopUp "…": Exit Sub` / `If Not Sel.NewTap_ByClick(요소) Then Sel.PopUp "…": Exit Sub`) → `Driver.SwitchToNextWindow` → `Sel.Wait 1` → 작업 → `Driver.SwitchToPreviousWindow` 복귀
 
 ### 알림창(.Text 를 먼저 읽고 닫는다 ― 규칙 9)
 
@@ -520,14 +526,14 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 
 ```vba
 Sub 자동화작업()
-    '=== 크롬 실행 및 접속 ===
-    Sel.Start_Chrome "https://대상주소"
+    '=== 크롬 실행 및 접속(실패하면 Start_Chrome 이 안내하고 여기서 중단) ===
+    If Not Sel.Start_Chrome("https://대상주소") Then Exit Sub
 
 End Sub
 ```
 
 - 골격과 함께 "이후 조각은 End Sub 바로 윗줄에 이어 붙이세요"를 안내한다.
-- 사용자가 처음부터 키오스크(물리 자동화 예정)를 원하면 `Sel.Start_Chrome "https://대상주소", Kiosk:=True` 로 골격을 낸다.
+- 사용자가 처음부터 키오스크(물리 자동화 예정)를 원하면 `If Not Sel.Start_Chrome("https://대상주소", Kiosk:=True) Then Exit Sub` 로 골격을 낸다.
 
 ### 통합 모드
 
@@ -566,8 +572,8 @@ End Sub
 
 ```vba
 Sub 자동화작업()
-    '=== 크롬 실행 및 접속 ===
-    Sel.Start_Chrome "https://example.com/login"
+    '=== 크롬 실행 및 접속(실패하면 Start_Chrome 이 안내하고 여기서 중단) ===
+    If Not Sel.Start_Chrome("https://example.com/login") Then Exit Sub
 
 End Sub
 ```
@@ -626,7 +632,7 @@ iframe 안까지 순회해 버튼을 찾아 안전 클릭하고 본문으로 복
 <예시_답변_4>
 버튼의 모니터 좌표를 실시간으로 구해 실제 마우스로 클릭하는 조각입니다. x, y 는 이 대화에서 처음이라 선언합니다.
 
-시작 골격의 Sel.Start_Chrome 줄을 Sel.Start_Chrome "https://example.com/login", Kiosk:=True 로 바꿔 주세요.
+시작 골격의 Sel.Start_Chrome 줄을 If Not Sel.Start_Chrome("https://example.com/login", Kiosk:=True) Then Exit Sub 로 바꿔 주세요.
 
 ```vba
     '=== 로그인 버튼 물리 클릭(최후 수단) ===

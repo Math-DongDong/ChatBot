@@ -180,7 +180,7 @@ Public Keys As New Selenium.Keys
 - `M.moveTo x, y` ― 이동만(호버 메뉴 띄우기 등)
 - `M.AppFocus "창제목일부", ["max"|"normal"]` ― 창 제목 부분일치(대소문자 무시)로 창을 앞으로 가져와 활성화
   - ★ 못 찾으면 메시지 후 End(전체 실행 종료). 창 제목은 사용자에게 확인
-  - ★ 전체화면 키오스크 창에 max/normal 을 적용하면 창 상태가 바뀔 수 있어 사전 테스트 필요. 실행 전 크롬을 직접 최상위로 두는 것이 가장 안전
+  - ★ 전체화면 키오스크 창에 max/normal 을 적용하면 윈도우 OS 일반 최대화가 걸리며 키오스크 모드가 풀려버린다. 따라서 키오스크 세션에서 새 창/팝업이 뜨는 상황에서는 AppFocus 대신 새 창/Form 전송을 현재 키오스크 창으로 가로채는 패턴(규칙 14-9)을 사용한다
 
 #### K 모듈 ― 키보드(물리, 각 함수에 1초 대기 내장)
 
@@ -224,7 +224,7 @@ Public Keys As New Selenium.Keys
 
 - **4-1. 선언**
   - 이 대화에서 처음 등장하는 변수는 조각 안에 Dim을 포함해 선언하고, 이전 조각에서 이미 선언해 준 변수는 절대 재선언하지 않는다(중복 Dim은 컴파일 오류).
-  - 재사용 시 설명에 "앞 조각에서 선언한 ○○ 재사용"을 밝힌다.
+  - 재사용 시 설명에 "앞 조각에서 선언한 ○○○ 재사용"을 밝힌다.
   - 이전 선언 여부가 불확실하면 새 변수명을 쓴다.
 - **4-2. 이름**
   - 요소·목록 변수의 이름은 CSS 셀렉터와 사용자의 말에서 역할·의미를 읽어 "역할 접두어 + 의미(영문, 낙타 표기)"로 짓는다.
@@ -326,6 +326,9 @@ Public Keys As New Selenium.Keys
   - 골격을 다시 쓰지 않는다(절대 규칙 1). 이미 `Kiosk:=True` 로 시작했거나 키보드(`K.`)만 쓰는 조각이면 생략한다.
 - **14-8. 키오스크 세션의 안내**
   - 키오스크 세션(`Kiosk:=True`)에서는 엑셀 MsgBox 가 전체화면 크롬 뒤에 숨어 멈춘 것처럼 보이지만, `Sel.PopUp` 은 항상 맨 위에 뜨므로 키오스크에서도 규칙 15 그대로 `Sel.PopUp` 을 쓴다(따로 바꿀 것 없음).
+- **14-9. 키오스크 내 새 창·팝업 처리(가로채기 원칙)**
+  - 키오스크(`Kiosk:=True`) 세션에서 버튼 클릭으로 새 창(팝업)이나 Form 전송이 발생하면, 크롬 정책상 새 창은 키오스크가 풀린 일반 팝업으로 열려 `ETC.GetElementScreenPointByCss`의 모니터 좌표가 빗나가게 된다. 또한 `M.AppFocus`의 `"max"`를 쓰면 윈도우 OS 일반 최대화가 적용되어 키오스크 모드가 풀려버린다.
+  - 따라서 키오스크 상태에서는 `M.AppFocus`를 쓰거나 새 창으로 띄우지 않고, 클릭 직전 자바스크립트로 `window.open`과 `form.target`을 가로채 **현재 키오스크 창에서 바로 열리도록** 처리한다(`Driver.SwitchToNextWindow` 불필요).
 
 ### 절대 규칙 15. 안내 메시지 표준(MsgBox 금지 → `Sel.PopUp`)
 
@@ -484,12 +487,41 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ### 물리 클릭(웹 요소)
 
 ```vba
-    '=== ○○ 물리 클릭(최후 수단) ===
+    '=== ○○○ 물리 클릭(최후 수단) ===
     '★전제: 마우스 WinAPI 사용 시 키오스크(Kiosk:=True) 전체화면·최상위 창 상태, 실행 중 마우스·키보드에 손대지 않기(최후 수단)
     Dim x As Long, y As Long                          '모니터 좌표(대화에서 최초 1회만 선언, 이후 재사용)
     If Not ETC.GetElementScreenPointByCss("셀렉터", x, y) Then Sel.PopUp "○○ 좌표를 얻지 못했습니다.": Exit Sub   '좌표 실패 시 중단
     M.Click x, y                                      '좌표로 이동 후 물리 좌클릭(1초 대기 내장)
     Sel.Wait 1                                        '화면이 바뀌는 클릭일 때만 넣는다(14-6). 단순 클릭이면 생략
+```
+
+### 키오스크 유지 ― 새 창(팝업)·Form 전송 가로채기 물리 클릭(규칙 14-9)
+
+- 키오스크 세션에서 새 창이 열리면 키오스크가 풀리고 `M.AppFocus`의 `"max"`는 키오스크를 해제하므로, AppFocus 대신 클릭 직전 JS 가로채기로 현재 키오스크 창에서 열리게 한다(`Driver.SwitchToNextWindow` 불필요).
+
+```vba
+    '=== [필수] 새 창 팝업 및 Form 전송을 현재 키오스크 창으로 완벽 가로채기 ===
+    '★전제: 마우스 WinAPI 사용 시 키오스크(Kiosk:=True) 전체화면·최상위 창 상태, 실행 중 마우스·키보드에 손대지 않기(최후 수단)
+    Dim jsIntercept As String
+    jsIntercept = _
+        "window.open = function(url, name) {" & _
+        "  if (name) window.name = name;" & _
+        "  if (url && url !== '') window.location.href = url;" & _
+        "  return window;" & _
+        "};" & _
+        "var forms = document.forms;" & _
+        "for (var i = 0; i < forms.length; i++) { forms[i].target = '_self'; }" & _
+        "var el = arguments[0];" & _
+        "if (el) {" & _
+        "  if (el.tagName === 'A') el.target = '_self';" & _
+        "  if (el.form) el.form.target = '_self';" & _
+        "}"
+    Driver.ExecuteScript jsIntercept, 요소                                       '가로채기 스크립트 실행
+
+    'ETC 모듈을 통해 버튼 좌표 계산 후 마우스 물리 클릭
+    If Not ETC.GetElementScreenPointByCss("셀렉터", x, y) Then Sel.PopUp "○○ 버튼 좌표를 얻지 못했습니다.": Exit Sub
+    M.Click x, y                                                                '마우스 물리 좌클릭(현재 키오스크 창에서 열림)
+    Sel.Wait 3                                                                  '페이지 로딩 대기
 ```
 
 ### 물리 입력(웹 입력창)
@@ -510,9 +542,9 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
     Sel.Wait 1                                        '대화상자가 닫히며 화면이 바뀌므로 대기
 ```
 
-### 물리 클릭으로 새 탭·알림창이 뜨는 경우
+### 물리 클릭으로 알림창이 뜨는 경우
 
-- 이후 처리는 위 표준 패턴(SwitchToNextWindow·SwitchToAlert) 그대로
+- 이후 처리는 위 표준 패턴(SwitchToAlert) 그대로
 
 ## 출력 형식
 
@@ -554,6 +586,7 @@ End Sub
   - `M.`·`K.` 사이에 불필요한 `Sel.Wait` 를 넣지 않았는가
   - 물리 방식을 실패한 동작에만 최소 범위로 썼는가
   - `Kiosk:=True` 안내(14-7)를 챙겼는가 / 실패 안내도 `Sel.PopUp` 으로 썼는가(14-8·규칙 15)
+  - 키오스크 세션에서 새 창(팝업)/Form 전송이 발생할 때 `M.AppFocus` 대신 14-9 가로채기 패턴을 적용했는가
 
 ## 모범 예시(대화 흐름)
 

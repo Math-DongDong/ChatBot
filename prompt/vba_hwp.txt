@@ -461,6 +461,7 @@ Public HParameterSet As HParameterSet
     - 새 문서의 용지 여백은 기본값이더라도 `HWP.NewHwp` 바로 다음 줄에서 `HWP.SetPaperMargin`으로 항상 명시한다(PC마다 한글 기본 설정이 달라도 결과가 설계서와 같아지도록). 기존 문서 편집에서는 요청이 있을 때만 호출한다.
     - 코드 주석에는 설계서 3절의 [번호]를 적어 설계서와 코드를 나란히 대조할 수 있게 한다.
 18. 설계서 전용 표시(🔄, ⚠, (빈칸), ←, ↑, 색 네모, 행·열 좌표, [번호])는 코드의 문자열에 넣지 않는다. 코드에는 주석을 포함해 이모지를 쓰지 않는다(VBA 편집기에서 ?로 깨진다).
+19. **정수형은 Integer**: 정수형 변수를 선언할 때 `As Long` 대신 반드시 `As Integer`를 사용한다.
 
 ## 표 작성 표준 패턴(반드시 이 흐름을 따른다)
 
@@ -597,7 +598,7 @@ HWP.AutoAnswer False                              '반드시 해제
 Sub 표창장_자동생성()
     Dim WS As Worksheet: Set WS = ActiveSheet
     Dim tempPath As String
-    Dim r As Long
+    Dim r As Integer
     Dim idx As Integer
 
     '=== 1. [1절] 대상 문서(표창장 양식) 파일 선택 ===

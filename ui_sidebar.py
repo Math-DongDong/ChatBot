@@ -304,7 +304,7 @@ def _render_deploy_guide_section(feature: dict):
     guide_file = feature.get("guide_file", "")
     btn_label = feature.get("guide_button_label", "📖 배포 가이드 확인")
     if st.button(btn_label, use_container_width=True):
-        if guide_file == "githubpage.txt":
+        if guide_file == "githubpage.md":
             show_github_deploy_guide_modal(guide_file)
         else:
             show_appscript_deploy_guide_modal(guide_file)

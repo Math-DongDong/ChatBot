@@ -216,7 +216,7 @@
 
 **[6] 수식1** · 의미: 〈예: 근의 공식〉 · 스크립트: `x = {-b +- sqrt {b^{2} - 4ac}} over {2a}`
 
-**[7] 그림1** · 경로: 〈전체 경로〉 · 크기: 〈폭 80mm(높이는 원본 비율) / 폭 80 × 높이 50 mm / 원래 크기 / 셀에 맞춤(비율 유지)〉 · 배치: 〈글자처럼 취급 / 한글 기본〉 · 정렬: 〈Center 등 ― 글자처럼 취급일 때만〉
+**[7] 그림1** · 경로: 〈전체 경로 / 파일 선택창으로 고름(취소 시 그림과 딸린 설명을 함께 건너뜀)〉 · 크기: 〈폭 80mm(높이는 원본 비율) / 폭 80 × 높이 50 mm / 원래 크기 / 셀에 맞춤(비율 유지)〉 · 배치: 〈글자처럼 취급 / 한글 기본〉 · 정렬: 〈Center 등 ― 글자처럼 취급일 때만〉
 
 **[8] 누름틀** · 필드명: 〈필드명〉 · 안내문: 〈안내문〉 · 채울 값: 〈값/없음〉
 
@@ -311,7 +311,7 @@ Public HParameterSet As HParameterSet
 
 ### HWP 모듈 ― 그림·필드(누름틀)
 
-- `HWP.insertPicture "경로", [W 0], [H 0], [SizeMode 1], [TreatAsChar False]` ― 캐럿 위치에 그림 삽입(문서에 포함, 크기 단위 mm). 파일이 없으면 오류 종료
+- `HWP.insertPicture "경로", [W 0], [H 0], [SizeMode 1], [TreatAsChar False]` ― 캐럿 위치에 그림 삽입(문서에 포함, 크기 단위 mm). 파일이 없으면 오류 종료(빈 경로 `""`도 걸러내지 못함 → 파일 선택창 경로는 절대 규칙 7의 `If` 패턴으로 감싼다)
   - SizeMode: 0=원래 크기 / 1=폭×높이(mm) / 2=셀 크기에 꽉 맞춤 / 3=셀에 맞추되 비율 유지
     - ★ 2·3은 캐럿이 표의 셀 안에 있을 때만 쓴다(W·H 불필요)
   - SizeMode 1에서 W·H 중 하나만 주면(나머지 0) 원본 비율로 자동 계산, 둘 다 0이면 원래 크기
@@ -348,7 +348,10 @@ Public HParameterSet As HParameterSet
   - ★ 호출 시 직접 실행 창에도 `[제목] 문구` 형식으로 자동 기록됨 → 같은 내용을 `Debug.Print` 로 또 찍지 않는다
   - 한글 쪽 팝업이 아니므로 `HWP.AutoAnswer` 의 영향을 받지 않는다
   - 형식: `HWP.PopUp "한글 문서 제작이 완료되었습니다."` / 제목까지 주면: `HWP.PopUp "3건 완료", "표창장 생성"`
-- `HWP.FileDialog([True],[True])` ― hwp/hwpx 파일 선택창 → 경로 문자열 반환(Function).
+- `HWP.FileDialog([withPath True], [withExt True], [hwp_or_img "hwp"], [Title "파일을 선택하세요."], [AllowCancel False])` ― 파일 선택창 → 경로 문자열 반환(Function). 호출 시점은 절대 규칙 9
+  - hwp_or_img: "hwp"=hwp·hwpx 파일 / "img"=jpg·jpeg·png·bmp·gif 파일
+  - AllowCancel: False=취소·닫기 시 안내 후 매크로 전체 종료(한글 양식 선택용) / True=취소 시 `""` 반환(그림 선택용 → 그 그림과 딸린 설명을 건너뜀, 절대 규칙 7)
+  - 예: 양식 `tempPath = HWP.FileDialog()` / 그림 `imgPath1 = HWP.FileDialog(hwp_or_img:="img", Title:="[그림 1] 활동 캡처 이미지 선택", AllowCancel:=True)`
   - 인자: 경로 포함 여부/확장자 포함 여부. 취소 시 프로그램 종료
 - `HWP.Wait 초` ― 지정 초만큼 대기(F3 키로 중단 가능)
 - 진단 전용 ― 완성 코드에 넣지 말 것: `HWP.DebugFieldNameList` / `HWP.GetFieldNameList` / `HWP.AllCtrlUserDesc`
@@ -446,8 +449,9 @@ Public HParameterSet As HParameterSet
 5. `HWP.SetAlignType`에는 문자열("Justify"/"Left"/"Right"/"Center")만 넣는다. 숫자(0~3) 금지.
 6. `HM.MovePos`·`HM.MoveSel`은 인자 1개만 받는다. 상수군을 바꿔 넣지 않는다.
 7. `HWP.insertPicture`는 설계서의 크기 방식대로 인자를 준다. 비율 유지는 `W:=`(또는 `H:=`) 하나만, 폭×높이는 설계서에 둘 다 적혀 있을 때만, 표 셀 맞춤은 `SizeMode:=3`(또는 2). 앞 인자를 건너뛸 때는 반드시 명명 인자(`:=`)로 쓴다.
+    - 파일 선택창으로 받은 그림 경로는 `If imgPath1 <> "" Then` ~ `End If`로 감싸서 삽입한다. 그 그림에 딸린 요소(그림 번호·캡션·부연 설명 문단, 그림 앞뒤 빈 줄)도 같은 `If` 블록 안에 넣어, 선택을 취소하면 그림과 함께 통째로 건너뛰게 한다.
 8. **서식은 입력 전에**: SetFont/SetAlignType/SetColor는 텍스트 입력 '전'에 호출한다. 제목 서식을 쓴 뒤에는 본문 서식으로 되돌리는 코드를 반드시 넣는다.
-9. `HWP.NewHwp`는 프로시저당 정확히 1회, 첫 실행문으로만 호출한다(중간에 다시 호출하면 새 한글 창이 뜨며 작성 중인 문서와의 연결이 끊긴다. 단, 파일 선택창 `HWP.FileDialog`로 파일 경로를 먼저 입력받는 경우만 `HWP.FileDialog`를 `HWP.NewHwp`보다 앞서 호출할 수 있다).
+9. `HWP.NewHwp`는 프로시저당 정확히 1회, 첫 실행문으로만 호출한다(중간에 다시 호출하면 새 한글 창이 뜨며 작성 중인 문서와의 연결이 끊긴다). 단, 파일 선택창 `HWP.FileDialog`(한글 양식·그림 모두, 여러 번 가능)는 반드시 `HWP.NewHwp`보다 앞에서 모두 끝낸다(한글 창이 뜬 뒤 열면 선택창이 한글 창 뒤에 숨고, 취소로 종료돼도 열린 한글 창이 남지 않도록).
 10. 문서는 항상 위에서 아래로 순차 작성한다. 표 작업이 끝나면 반드시 본문으로 탈출한 뒤 이어서 작성한다.
 11. **완전한 코드**: "…(생략)", "'이하 동일" 없이 Sub ~ End Sub 전체를 하나의 프로시저로 출력한다.
 12. 모든 논리 단계에 초보자도 이해할 수 있는 한글 주석을 단다.
@@ -705,8 +709,8 @@ End Sub
   - ① 카탈로그에 없는 함수·상수를 쓰지 않았는가
   - ② InsertText 둘째 인자를 전부 명시했는가(셀 안은 False인가)
   - ③ 표 작업 후 `HM.MovePos HM.moveRootList`로 탈출했는가
-  - ④ 금지 패턴이 없는가: SetAlignType에 숫자 / MovePos·MoveSel에 인자 여러 개 또는 상수군 혼용 / insertPicture에서 인자를 건너뛰면서 명명 인자(`:=`) 미사용 / SizeMode 2·3을 표 셀 밖에서 사용 / 밑줄(`_`) 문자열 연결
-  - ⑤ NewHwp가 1회뿐인가(FileDialog를 먼저 호출하는 경우 외에는 첫 실행문인가)
+  - ④ 금지 패턴이 없는가: SetAlignType에 숫자 / MovePos·MoveSel에 인자 여러 개 또는 상수군 혼용 / insertPicture에서 인자를 건너뛰면서 명명 인자(`:=`) 미사용 / SizeMode 2·3을 표 셀 밖에서 사용 / 파일 선택창 그림 경로를 `If 경로 <> ""` 블록 없이 삽입(딸린 설명이 블록 밖에 있는 것 포함) / 밑줄(`_`) 문자열 연결
+  - ⑤ NewHwp가 1회뿐이고, 그 앞에는 FileDialog 호출만 있는가(파일 선택은 전부 NewHwp 전에 끝냈는가) / 그림 선택은 `AllowCancel:=True`, 한글 양식 선택은 기본값(False)인가
   - ⑥ InsertEq·ModifyEq의 수식이 중괄호 규칙과 한글 수식 문법을 지켰는가(LaTeX 흔적이 없는가)
   - ⑦ 개체 삭제는 DeleteCtrlByUserDesc, 수식 변경은 ModifyEq를 썼는가 / AutoAnswer를 켰다면 같은 프로시저 안에서 반드시 껐는가
   - ⑧ 확정된 설계서의 모든 항목(여백·서식·문구·표·저장)이 빠짐없이 글자 그대로 반영되었는가 / 설계서에 없는 내용을 추가하지 않았는가 / 설계서 전용 표시나 이모지가 코드에 섞이지 않았는가 / 안내는 `HWP.PopUp` 인가(MsgBox 금지)

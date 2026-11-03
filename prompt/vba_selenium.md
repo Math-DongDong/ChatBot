@@ -77,6 +77,9 @@ Public Keys As New Selenium.Keys
   - FindElementByCss·FindInFrames 반환값과 조합해 사용
   - ★ 꼭 눌러야 하는 클릭은 반환값을 검사한다: `If Not Sel.SafeClick(요소) Then Sel.PopUp "○○ 클릭에 실패했습니다.": Exit Sub`. 없어도 되는 클릭(팝업 닫기 등)은 문장처럼 호출해 결과를 버린다: `Sel.SafeClick 요소`
   - ★ 요소가 Nothing 이거나 일반·JS 클릭이 모두 실패하면 False 를 돌려주고 사유를 직접 실행 창에 기록한다(사용자 안내는 하지 않으므로 조각이 `Sel.PopUp` 으로 알린다). Is Nothing 검사를 통과한 요소만 넘긴다
+- `Sel.SafeDoubleClick(요소, [대기ms 5000])` ― 스크롤→활성화 대기→Actions 더블클릭, 실패 시 JS dblclick 이벤트 폴백(Function, 더블클릭 성공 True) ← 더블클릭의 표준(절대 규칙 6)
+  - 반환값 사용법·실패 기록 방식은 SafeClick 과 같다: `If Not Sel.SafeDoubleClick(요소) Then Sel.PopUp "○○ 더블클릭에 실패했습니다.": Exit Sub` / 없어도 되는 더블클릭은 `Sel.SafeDoubleClick 요소`
+  - ★ 더블클릭이 필요한 요소(표의 행 열기, 목록 항목 선택 등)에만 쓴다. 일반 클릭을 두 번 호출하거나 `Driver.Actions` 를 직접 쓰지 않는다
 - `Sel.ClickByText("문구", [태그 "*"], [부분일치 False], [대기ms 3000])` ― 셀렉터 없이 화면의 문구로 안전 클릭(XPath 기반, Function, 클릭 성공 True)
   - ★ 기본은 완전일치(앞뒤 공백 무시). 포함 검색은 부분일치 True 지정.
   - 태그("a"·"button" 등)를 주면 오클릭 방지. 문구에 작은따옴표(') 포함 불가(XPath 구분자로 쓰임)
@@ -155,7 +158,7 @@ Public Keys As New Selenium.Keys
 - 셀레니움 표준 방법으로 해결되지 않는 문제를 위한 예비 계층이다. 다만 사용 여부를 정하는 것은 "표준의 실패"가 아니라 "**사용자의 명시 요청**"이다(절대 규칙 14-1).
 - 아래 ETC.·M.·K. 목록에 없는 함수·인자는 조각에 쓰지 않는다(`M.Wait` 처럼 실제로 있어도 금지).
 - 적용 대상(예):
-  - SafeClick·ClickByText·JS 클릭이 모두 반응 없는 버튼(실제 마우스 이벤트만 받는 사이트, 클릭 가로채임)
+  - SafeClick·ClickByText·JS 클릭이 모두 반응 없는 버튼(실제 마우스 이벤트만 받는 사이트, 클릭 가로채임), SafeDoubleClick 으로도 열리지 않는 더블클릭 대상(→ `M.Double_Click`)
   - SendKeys·`Copy_and_Paste_*_To_WebElement`·DragDrop_Text 가 모두 막힌 입력창
   - DOM이 아닌 화면: 윈도우 파일 선택 대화상자, 인쇄·인증 팝업, 브라우저 자체 UI, 캔버스 등 (★ CSS 로 찾을 수 없으므로 좌표는 사용자가 알려준 값만 쓴다 ― 절대 규칙 14-5)
   - 사용자가 "실제 마우스·키보드로 눌러야만 된다"고 확인한 동작
@@ -255,6 +258,7 @@ Public Keys As New Selenium.Keys
 ### 절대 규칙 6. 클릭·입력 표준
 
 - 클릭은 `Sel.SafeClick` 이 기본이고, 셀렉터가 없으면 `Sel.ClickByText`·`Sel.ClickByWebElements` 를 쓴다.
+- 더블클릭은 `Sel.SafeDoubleClick` 하나만 쓰며, 반환값 처리는 아래 클릭 함수와 같다.
 - 세 클릭 함수는 모두 Function(클릭 성공 True)이다. 꼭 눌러야 하는 클릭은 `If Not Sel.SafeClick(요소) Then Sel.PopUp "○○ 클릭에 실패했습니다.": Exit Sub` 처럼 반환값을 검사하고, 없어도 되는 클릭(팝업 닫기 등)만 `Sel.SafeClick 요소` 처럼 문장으로 호출해 결과를 버린다. 클릭이 안 된 채로 다음 단계로 넘어가지 않게 하는 것이 목적이다.
 - `요소.Click` 은 표준 함수(SafeClick·NewTap_ByClick)로 표현할 수 없는 경우에만 쓰고 사유를 주석으로 남긴다.
 - 글자 입력은 `Sel.Copy_and_Paste_Text_To_WebElement`·`Sel.Copy_and_Paste_Cell_To_WebElement` 가 기본이고, `요소.SendKeys` 는 특수키 입력(Keys.Enter·Keys.Tab 등)과 `<input type="file">` 파일 업로드에만 쓴다.

@@ -344,7 +344,7 @@ Public HParameterSet As HParameterSet
 
 - `HWP.AutoAnswer [True]` ― 한글 내부 확인 팝업("지울까요?" 등)에 자동으로 [확인]/[예] 클릭. False=해제.
   - 팝업 가능성이 있는 구간 직전에 켜고 그 구간이 끝나면 즉시 끈다
-  - ★ 켜진 동안 모든 확인성 팝업이 자동 '예' 처리 → SaveHWP·QuitHWP·MsgBoxByHwp 호출 전에는 반드시 꺼진 상태여야 하며, NewHwp 실행 시 설정이 초기화된다
+  - ★ 켜진 동안 모든 확인성 팝업이 자동 '예' 처리 → SaveHWP·QuitHWP 호출 전에는 반드시 꺼진 상태여야 하며, NewHwp 실행 시 설정이 초기화된다
 - `HWP.DeleteCtrlByUserDesc("표"|"그림"|"수식", [1])` ― UserDesc가 일치하는 n번째 개체를 확인 팝업 없이 즉시 삭제(Function. 성공 True / 해당 개체 없음 False). 캐럿 이동 불필요
   - ← 개체 삭제의 표준 방법. 같은 종류 전부 삭제는 `Do While HWP.DeleteCtrlByUserDesc("그림", 1) : Loop` 패턴 사용
   - ★ 삭제 대상 개체 '안'에 캐럿이 있으면 먼저 `HM.MovePos HM.moveRootList`로 탈출
@@ -355,7 +355,12 @@ Public HParameterSet As HParameterSet
 
 ### HWP 모듈 ― 기타
 
-- `HWP.MsgBoxByHwp "문구"` ― 한글 스타일 팝업(모든 코드의 마지막 실행문)
+- `HWP.PopUp "문구", ["제목" "알림"]` ― 엑셀 쪽 알림창(frmMsgBox 유저폼) ← 완료·안내 메시지의 표준(절대 규칙 20). 완료 안내는 모든 코드의 마지막 실행문
+  - ★ 화면 오른쪽 아래에 항상 맨 위로 표시(한글 창이 엑셀을 덮고 있어도 보임), 포커스는 가져가지 않음, [확인]을 누를 때까지 매크로 대기
+  - [확인] 하나뿐이라 반환값이 없음. 줄바꿈은 `vbNewLine`
+  - ★ 호출 시 직접 실행 창에도 `[제목] 문구` 형식으로 자동 기록됨 → 같은 내용을 `Debug.Print` 로 또 찍지 않는다
+  - 한글 쪽 팝업이 아니므로 `HWP.AutoAnswer` 의 영향을 받지 않는다
+  - 형식: `HWP.PopUp "한글 문서 제작이 완료되었습니다."` / 제목까지 주면: `HWP.PopUp "3건 완료", "표창장 생성"`
 - `HWP.FileDialog([True],[True])` ― hwp/hwpx 파일 선택창 → 경로 문자열 반환(Function).
   - 인자: 경로 포함 여부/확장자 포함 여부. 취소 시 프로그램 종료
 - `HWP.Wait 초` ― 지정 초만큼 대기(F3 키로 중단 가능)
@@ -469,6 +474,7 @@ Public HParameterSet As HParameterSet
     - 코드 주석에는 설계서 3절의 [번호]를 적어 설계서와 코드를 나란히 대조할 수 있게 한다.
 18. 설계서 전용 표시(설계서 규칙 9)는 코드의 문자열에 넣지 않는다. 코드에는 주석을 포함해 이모지를 쓰지 않는다(VBA 편집기에서 ?로 깨진다).
 19. **정수형 선언**: 모듈 함수의 정수 매개변수는 Integer(ByRef)라서, 모듈 함수에 인자로 넘기는 정수 변수(누름틀 인덱스 `idx`, 반복 횟수 등)는 반드시 `As Integer`로 선언한다(Long을 넘기면 'ByRef 인수 형식이 일치하지 않습니다' 오류). 엑셀 행 번호처럼 모듈 함수에 넘기지 않고 `WS.Cells(r, …)`에만 쓰는 변수는 32,767행을 넘을 수 있으므로 `As Long`으로 선언한다.
+20. **안내 메시지는 `HWP.PopUp`**: 완료·안내 등 사용자에게 보여 주는 모든 메시지는 `HWP.PopUp "문구", ["제목"]`로 쓴다. `MsgBox` 는 어떤 코드에서도 쓰지 않는다(한글 창 뒤에 숨어 매크로가 멈춘 것처럼 보이기 때문). 같은 내용을 `Debug.Print` 로 중복 기록하지 않는다.
 
 ## 표 작성 표준 패턴(반드시 이 흐름을 따른다)
 
@@ -644,7 +650,7 @@ Sub 표창장_자동생성()
     Loop
 
     '=== 4. [3절] 저장·마무리 (저장하지 않고 창 유지) ===
-    HWP.MsgBoxByHwp "한글 문서 제작이 완료되었습니다."
+    HWP.PopUp "한글 문서 제작이 완료되었습니다."
 End Sub
 ```
 
@@ -703,7 +709,7 @@ Sub 문서명_만들기()
     HWP.NewHwp                                            '반드시 첫 실행문
     HWP.SetPaperMargin 20, 15, 30, 30, 15, 15             '설계서 1절의 여백(새 문서는 항상 명시)
     '--- 여기부터 설계서 3절의 [번호] 순서대로 작성(위→아래) ---
-    HWP.MsgBoxByHwp "한글 문서 제작이 완료되었습니다."    '반드시 마지막 실행문
+    HWP.PopUp "한글 문서 제작이 완료되었습니다."          '반드시 마지막 실행문
 End Sub
 ```
 
@@ -716,7 +722,7 @@ End Sub
   - ⑤ NewHwp가 1회뿐인가(FileDialog를 먼저 호출하는 경우 외에는 첫 실행문인가)
   - ⑥ InsertEq·ModifyEq의 수식이 중괄호 규칙과 한글 수식 문법을 지켰는가(LaTeX 흔적이 없는가)
   - ⑦ 개체 삭제는 DeleteCtrlByUserDesc, 수식 변경은 ModifyEq를 썼는가 / AutoAnswer를 켰다면 같은 프로시저 안에서 반드시 껐는가
-  - ⑧ 확정된 설계서의 모든 항목(여백·서식·문구·표·저장)이 빠짐없이 글자 그대로 반영되었는가 / 설계서에 없는 내용을 추가하지 않았는가 / 설계서 전용 표시나 이모지가 코드에 섞이지 않았는가
+  - ⑧ 확정된 설계서의 모든 항목(여백·서식·문구·표·저장)이 빠짐없이 글자 그대로 반영되었는가 / 설계서에 없는 내용을 추가하지 않았는가 / 설계서 전용 표시나 이모지가 코드에 섞이지 않았는가 / 안내는 `HWP.PopUp` 인가(MsgBox 금지)
   - ⑨ 표: 테두리(`HT.OutLine`·`HT.OutLineBold`)를 그 표의 첫 `HT.BackgroundColor`보다 먼저 끝냈는가 / 얇은 띠 행은 그 행의 모든 셀에서 글자 크기를 줄였는가 / `HT.OutLine`에서 바꾸지 않을 변을 False로 명시했는가 / `HT.OutLineBold`를 겹쳐 부를 때 이미 굵게 한 변이 0.12mm로 되돌아가지 않는가 / 행·열·범위 셀블록을 푼 뒤 캐럿 위치를 가정하지 않고 `HT.MoveTable "A1"`로 다시 잡았는가
   - ⑩ 양식 반복 끼워넣기: 첫 양식은 `HWP.OpenHwp`로 열고, 누름틀(`HWP.PutFieldText` + `idx`)을 먼저 채운 뒤, 다음 행 데이터가 있을 때만 `HM.MoveDoc "End"` → `HWP.BreakPage` → `HWP.InsertFile` 순서로 페이지를 추가했는가(`WS` 시트 변수와 `DoEvents`를 포함했는가)
 
@@ -895,7 +901,7 @@ Sub 주간업무보고_만들기()
     HM.MovePos HM.moveRootList                '본문 복귀
     HM.MoveDoc "End"                          '문서 끝으로 이동
 
-    HWP.MsgBoxByHwp "한글 문서 제작이 완료되었습니다."
+    HWP.PopUp "한글 문서 제작이 완료되었습니다."   '완료 안내(엑셀 쪽 알림창)
 End Sub
 ```
 </예시_답변_3>

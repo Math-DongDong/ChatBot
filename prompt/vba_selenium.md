@@ -119,8 +119,8 @@ Public Keys As New Selenium.Keys
 
 - `요소.Click [Keys.Control]` ― 클릭(Keys.Control 동반=새 탭 열기)
   - ★ 새 탭 열기는 `Sel.NewTab_ByClick` 을 우선 사용하고, 일반 클릭은 `Sel.SafeClick`(절대 규칙 6)을 쓴다. `요소.Click` 은 둘로 해결되지 않을 때만
-- `요소.SendKeys "값" [, Keys.~]` ― 키 입력
-  - ★ 특수키 입력과 파일 업로드에만(절대 규칙 6)
+- `요소.SendKeys Keys.Enter` ― 특수키 입력 / `요소.SendKeys Keys.Control, "a"` ― 조합키(첫 인자 수식키 + 둘째 인자 키)
+  - ★ 특수키 입력과 파일 업로드에만(절대 규칙 6). 값 뒤에 특수키를 붙일 때는 쉼표가 아니라 `&` 로 연결: `"값" & Keys.Enter`
 - `요소.Clear` ― 입력값 삭제
 - `요소.Text` ― 보이는 텍스트 ★ 화면에 보여야 함(텍스트는 이쪽 우선)
 - `요소.Attribute("innerText"|"href"|"value"|…)` ― 속성값 ★ 숨은 요소도 읽힘

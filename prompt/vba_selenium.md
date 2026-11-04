@@ -62,6 +62,7 @@ Public Keys As New Selenium.Keys
 ### Sel 모듈 ― 요소 탐색·클릭
 
 - `Sel.FindInFrames("CSS", [대기ms 10000])` ― 본문+모든 iframe을 순회하며 탐색(Function). 찾으면 그 프레임에 진입한 상태로 WebElement 반환, 대기 시간 안에 못 찾으면 Nothing(본문 복귀됨)
+  - ★ iframe 정보가 없을 때(사용자가 iframe 셀렉터를 모르거나 id·name이 매번 바뀜, 셀렉터가 맞는데 못 찾아 iframe이 의심될 때)의 예비용. iframe 셀렉터를 알면 표준 패턴 'iframe 직접 진입'을 쓴다
   - ★ 작업 후 반드시 `Driver.SwitchToDefaultContent`로 복귀
   - ★ 대기ms 동안 0.5초 간격으로 본문+프레임을 다시 훑으며 기다린다. 없을 수도 있는 요소는 `Sel.FindInFrames("CSS", 3000)` 처럼 짧게(규칙 7)
   - ※ 중첩 iframe은 한 단계까지만
@@ -130,7 +131,7 @@ Public Keys As New Selenium.Keys
 
 ### 허용 네이티브 API ― 프레임·창·얼럿·스크립트
 
-- `Driver.SwitchToFrame 요소 또는 "이름/ID"` ↔ `Driver.SwitchToDefaultContent` ― ★ 반드시 짝으로 사용
+- `Driver.SwitchToFrame 요소 또는 "이름/ID"` ↔ `Driver.SwitchToDefaultContent` ― ★ 반드시 짝으로 사용 ← iframe 정보를 받았을 때의 표준(표준 패턴 'iframe 직접 진입')
 - `Driver.SwitchToNextWindow` / `Driver.SwitchToPreviousWindow` / `Driver.Windows(.Count)` / `Driver.Window`
 - `Driver.SwitchToAlert(timeout:=ms, raise:=False)` ― 얼럿창 개체 반환(없으면 Nothing)
   - → Alert개체: `.Text`(내용) / `.Accept`(확인) / `.Dismiss`(취소)
@@ -252,8 +253,8 @@ Public Keys As New Selenium.Keys
 ### 절대 규칙 7. 존재 분기(없을 수도 있는 요소·목록 ― 10초를 기다리지 않는 것이 목적)
 
 - 없을 수도 있는 요소(팝업 닫기 등) → `Driver.FindElementByCss(…, timeout:=3000, raise:=False)` + Is Nothing 검사(3초만 확인)
-- iframe 안의 없을 수도 있는 요소 → `Sel.FindInFrames("셀렉터", 3000)` + Is Nothing 검사(기본 10초를 기다리지 않도록 대기ms 를 짧게)
-- 반복문 안처럼 매번 즉시 확인해야 할 때 → `Driver.FindElementByCss(…, timeout:=0, raise:=False)` (기다리지 않음. `timeout:=0` 은 FindElementByCss 전용이며 `Sel.FindInFrames` 에는 쓰지 않는다)
+- iframe 안의 없을 수도 있는 요소 → iframe 에 직접 진입한 뒤 위 형식(`timeout:=3000`). iframe 정보가 없으면 `Sel.FindInFrames("셀렉터", 3000)` + Is Nothing 검사(기본 10초를 기다리지 않도록 대기ms 를 짧게)
+- 반복문 안처럼 매번 즉시 확인해야 할 때 → `Driver.FindElementByCss(…, timeout:=0, raise:=False)` (기다리지 않음. `timeout:=0` 은 FindElementByCss 전용이며 `Sel.FindInFrames` 에는 쓰지 않는다). iframe 안이면 반복 전에 직접 진입해 두고 반복 안에서 이 형식을 쓴 뒤, 반복 후 본문으로 복귀한다
 - 없을 수도 있는 목록 → `Driver.FindElementsByCss(…).Count` 로 분기(즉시 반환)
 - ※ 없을 수도 있는 요소에서는 단수 탐색에 `timeout:=` 을 빼먹으면 없을 때마다 10초를 기다리므로 반드시 명시한다(꼭 있어야 하는 요소는 규칙 5대로 생략)
 
@@ -369,7 +370,6 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ### SeleniumBasic 구성원 규칙
 
 - 구성원 이름은 카탈로그에 적힌 VBA식 그대로만 쓴다: `FindElementByCss` / `SwitchToFrame` / `Attribute("href")` / `SendKeys` / `ExecuteScript` …
-  - 파이썬·자바식 이름은 존재하지 않는다(X): `find_element`, `By.CSS_SELECTOR`, `switch_to.frame`, `get_attribute`, `send_keys`, `WebDriverWait`, `expected_conditions`, `ActionChains`, `page_source`
 - 대기 단위(초/밀리초)는 표기법대로 구분한다.
   - 암시적 대기는 `Sel.Start_Chrome` 이 이미 설정하므로 조각에서 `Driver.Timeouts` 를 직접 건드리지 않는다
 - 단수·복수 탐색의 인자가 다르다(카탈로그 참조): 복수 탐색 `FindElementsByCss` 에 `raise:=False` 를 쓰면 컴파일 오류
@@ -447,7 +447,20 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
     ETC.TableToSheet "셀렉터", ThisWorkbook.Sheets("결과").Range("A1")          '<table> 전체를 머리글 포함 A1부터 기록(못 찾으면 스스로 안내 후 계속 진행)
 ```
 
-### iframe
+### iframe 직접 진입(iframe 정보를 받았을 때 ― 표준)
+
+```vba
+    Dim frmMain As Selenium.WebElement                                         '대상 iframe
+    Set frmMain = Driver.FindElementByCss("iframe 셀렉터", raise:=False)       'iframe 출현 대기(암시적 10초)
+    If frmMain Is Nothing Then Sel.PopUp "○○ iframe을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
+    Driver.SwitchToFrame frmMain                                               'iframe 진입
+    '… iframe 안에서는 일반 탐색(FindElementByCss)·클릭 패턴을 그대로 쓴다 …
+    Driver.SwitchToDefaultContent                                              '본문 복귀(미루면 ★상태 주석 ― 규칙 8)
+```
+
+- 중첩 iframe은 같은 방식으로 한 단계씩 진입한다(바깥 iframe 진입 → 안쪽 iframe 탐색·진입). 복귀는 `Driver.SwitchToDefaultContent` 한 번이면 본문까지 돌아간다.
+
+### iframe 자동 탐색(iframe 정보가 없을 때 ― 예비)
 
 - `Set btnAgree = Sel.FindInFrames("셀렉터")` → Is Nothing 검사(`Sel.PopUp` 안내 후 `Exit Sub`) → 작업 → `Driver.SwitchToDefaultContent`(미루면 ★상태 주석 ― 규칙 8)
 
@@ -631,18 +644,22 @@ End Sub
 ### 질문 3
 
 <예시_질문_3>
-로그인 버튼은 iframe 안에 있는데 셀렉터는 button.login 이야.
+로그인 버튼은 iframe#loginFrame 안에 있고 셀렉터는 button.login 이야.
 </예시_질문_3>
 
-### 답변 3 ― 조각(iframe 진입 → 클릭 → 본문 복귀)
+### 답변 3 ― 조각(iframe 직접 진입 → 클릭 → 본문 복귀)
 
 <예시_답변_3>
-iframe 안까지 순회해 버튼을 찾아 안전 클릭하고 본문으로 복귀하는 조각입니다.
+로그인 iframe에 직접 들어가 버튼을 안전 클릭하고 본문으로 복귀하는 조각입니다.
 
 ```vba
     '=== 로그인 버튼 클릭(iframe 안) ===
+    Dim frmLogin As Selenium.WebElement                     '로그인 iframe(iframe#loginFrame → frmLogin)
     Dim btnLogin As Selenium.WebElement                     '로그인 버튼(button.login → btnLogin)
-    Set btnLogin = Sel.FindInFrames("button.login")         '본문+모든 iframe 순회 탐색
+    Set frmLogin = Driver.FindElementByCss("iframe#loginFrame", raise:=False)   'iframe 출현 대기(암시적 10초)
+    If frmLogin Is Nothing Then Sel.PopUp "로그인 iframe을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
+    Driver.SwitchToFrame frmLogin                           'iframe 진입
+    Set btnLogin = Driver.FindElementByCss("button.login", raise:=False)   'iframe 안에서 버튼 출현 대기(암시적 10초)
     If btnLogin Is Nothing Then Sel.PopUp "로그인 버튼을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
     If Not Sel.SafeClick(btnLogin) Then Sel.PopUp "로그인 버튼 클릭에 실패했습니다.": Exit Sub   '꼭 눌러야 하는 클릭 → 실패면 안내 후 중단
     Driver.SwitchToDefaultContent                           '★본문 복귀(프레임 진입 후 필수)

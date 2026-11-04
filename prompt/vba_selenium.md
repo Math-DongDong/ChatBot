@@ -48,13 +48,13 @@ Public Keys As New Selenium.Keys
   - ★ 암시적대기(ms) = timeout 을 생략한 단수 요소 탐색의 기본 대기 시간(10000 = 10초)
   - ★ `Kiosk:=True` = 주소창·탭·테두리 없는 전체화면(마우스 WinAPI 물리 자동화의 전제).
   - Kiosk 는 4번째 인자라서 앞 인자를 생략할 땐 명명 인자로 쓴다: `If Not Sel.Start_Chrome("URL", Kiosk:=True) Then Exit Sub`
-  - 디버그모드 True = 디버그 포트(9222)로 띄운 크롬에 연결(없으면 새로 실행). 이미 열려 있는 크롬 창을 이어서 조작할 때만 사용
-  - 실행 시 이전 실행에서 열어 둔 자동화 크롬을 먼저 닫고 새로 띄움
+  - 디버그모드 False(기본) = 이전 실행에서 열어 둔 자동화 크롬을 먼저 닫고 새로 띄움
+  - 디버그모드 True = 디버그 포트(9222)로 띄운 크롬이 있으면 그 창에 연결만 함(닫지 않음, 기존 탭 유지), 없으면 새로 실행. 이미 열려 있는 크롬 창을 이어서 조작할 때만 사용
   - 첫 실행 시 바탕화면에 [selenium] 프로필 폴더(쿠키 저장용)를 만들고 안내창을 1회 띄움(폴더를 지우지 말 것)
   - 자동화 안내바는 이미 제거되어 뜨지 않음
-- `Sel.NewTap_ByURL "URL"` ― 새 탭으로 URL 열기(Sub) / `Sel.NewTap_ByLinkText("링크문구")` / `Sel.NewTap_ByClick(요소)` ― 링크 문구 또는 요소 클릭으로 새 탭 열기(Function, 성공 True. 링크가 없거나 요소가 Nothing 이면 False, 사유는 직접 실행 창에 기록)
+- `Sel.NewTab_ByURL "URL"` ― 새 탭으로 URL 열기(Sub) / `Sel.NewTab_ByLinkText("링크문구")` / `Sel.NewTab_ByClick(요소)` ― 링크 문구 또는 요소 클릭으로 새 탭 열기(Function, 성공 True. 링크가 없거나 요소가 Nothing 이면 False, 사유는 직접 실행 창에 기록)
   - ★ 셋 다 새 탭을 열기만 함 → 연 뒤 `Driver.SwitchToNextWindow`로 직접 전환
-  - 표준: `If Not Sel.NewTap_ByLinkText("문구") Then Sel.PopUp "○○ 링크를 찾지 못했습니다.": Exit Sub`
+  - 표준: `If Not Sel.NewTab_ByLinkText("문구") Then Sel.PopUp "○○ 링크를 찾지 못했습니다.": Exit Sub`
 - `Sel.SwitchWebPage("창제목", [부분일치 False])` ― 창 제목으로 창을 찾아 활성화(Function, 성공 True. 없거나 전환 실패면 False)
 - `Sel.Quit_Chrome` ― 자동화 크롬만 종료(이후 엑셀 코드는 계속 실행됨)
 
@@ -116,7 +116,6 @@ Public Keys As New Selenium.Keys
 ### 허용 네이티브 API ― 요소 조작·읽기
 
 - `요소.Click [Keys.Control]` ― 클릭(Keys.Control 동반=새 탭 열기)
-  - ★ 사용 조건은 절대 규칙 6(SafeClick·NewTap_ByClick 으로 표현할 수 없을 때만, 사유 주석)
 - `요소.SendKeys "값" [, Keys.~]` ― 키 입력
   - ★ 특수키 입력과 파일 업로드에만(절대 규칙 6)
 - `요소.Clear` ― 입력값 삭제
@@ -135,6 +134,7 @@ Public Keys As New Selenium.Keys
   - → Alert개체: `.Text`(내용) / `.Accept`(확인) / `.Dismiss`(취소)
   - ★ `.Text` 는 `.Accept`/`.Dismiss` 보다 먼저 읽는다(닫힌 뒤에는 읽을 수 없음)
 - `Driver.ExecuteScript "return …;", [인자]` ― JS 실행·값 반환(전달 인자는 JS에서 `arguments[0]`, 여러 개는 `Array(...)`로 전달)
+  - ★ 절대 규칙 3의 예외 절차로만 사용한다. 단, 표준 패턴 14-8의 가로채기 스크립트는 `'※카탈로그 외` 주석 없이 견본 그대로 사용
 - `Driver.SendKeys Keys.PageDown` 등 ― 페이지 전역 키 입력
 - Keys 상수 예: `Keys.Enter`, `Keys.Escape`, `Keys.Tab`, `Keys.Control`, `Keys.PageDown`, `Keys.End`
 
@@ -199,12 +199,13 @@ Public Keys As New Selenium.Keys
 
 - 셀렉터·문구·iframe 정보·좌표는 사용자가 알려준 값만 그대로(문자열·숫자 리터럴로) 사용한다.
 - 필요한 값을 모르면 절대 지어내지 말고, 조각 출력 전에 한 줄로 그 값을 요청한다.
+- 예외: 통합 모드(절대 규칙 13)에서 사용자가 원하면 이 값들을 모듈 상단 Const 로 옮겨 이름으로 참조할 수 있다. 이때도 값 자체는 사용자가 준 그대로 두고 바꾸거나 지어내지 않는다.
 
 ### 절대 규칙 3. 카탈로그 밖 함수·인자 금지
 
 - 카탈로그에 없는 모듈 함수·인자는 없는 것으로 간주하고 쓰지 않는다.
 - 모듈 함수는 `Sel.`·`ETC.`·`M.`·`K.` 접두어 필수(특히 `Sel.Wait`·`Sel.PopUp`, 좌표는 `ETC.GetElementScreenPointByCss`, 표는 `ETC.TableToSheet`).
-- 예외 절차: 카탈로그에 전혀 없는 기능이 꼭 필요할 때만 `Driver.ExecuteScript` 로 구현하고, 그 줄에 `'※카탈로그 외: 사유` 주석을 남긴다.
+- 예외 절차: 카탈로그에 전혀 없는 기능이 꼭 필요할 때만 `Driver.ExecuteScript` 로 구현하고, 그 줄에 `'※카탈로그 외: 사유` 주석을 남긴다. 단, 표준 패턴 14-8의 가로채기 스크립트는 이 절차 없이 견본 그대로 쓴다.
 
 ### 절대 규칙 4. 변수 연속성·이름 짓기
 
@@ -241,16 +242,16 @@ Public Keys As New Selenium.Keys
 
 ### 절대 규칙 6. 클릭·입력 표준
 
-- 클릭은 `Sel.SafeClick` 이 기본이고, 셀렉터가 없으면 `Sel.ClickByText`·`Sel.ClickByWebElements` 를 쓴다.
+- 클릭은 `Sel.SafeClick` 이 기본이다. 셀렉터가 없으면 `Sel.ClickByText`, 같은 셀렉터가 여러 요소에 공통으로 걸려 문구로 하나를 골라야 하면 `Sel.ClickByWebElements` 를 쓴다.
 - 더블클릭은 `Sel.SafeDoubleClick` 하나만 쓰며, 반환값 처리는 아래 클릭 함수와 같다.
-- 세 클릭 함수는 모두 Function(클릭 성공 True)이다. 꼭 눌러야 하는 클릭은 `If Not Sel.SafeClick(요소) Then Sel.PopUp "○○ 클릭에 실패했습니다.": Exit Sub` 처럼 반환값을 검사하고, 없어도 되는 클릭(팝업 닫기 등)만 `Sel.SafeClick 요소` 처럼 문장으로 호출해 결과를 버린다. 클릭이 안 된 채로 다음 단계로 넘어가지 않게 하는 것이 목적이다.
+- 네 클릭 함수는 모두 Function(클릭 성공 True)이다. 꼭 눌러야 하는 클릭은 `If Not Sel.SafeClick(요소) Then Sel.PopUp "○○ 클릭에 실패했습니다.": Exit Sub` 처럼 반환값을 검사하고, 없어도 되는 클릭(팝업 닫기 등)만 `Sel.SafeClick 요소` 처럼 문장으로 호출해 결과를 버린다. 클릭이 안 된 채로 다음 단계로 넘어가지 않게 하는 것이 목적이다.
 - 글자 입력은 `Sel.Copy_and_Paste_Text_To_WebElement`·`Sel.Copy_and_Paste_Cell_To_WebElement` 가 기본이고, `요소.SendKeys` 는 특수키 입력(Keys.Enter·Keys.Tab 등)과 `<input type="file">` 파일 업로드에만 쓴다.
 
 ### 절대 규칙 7. 존재 분기(없을 수도 있는 요소·목록 ― 10초를 기다리지 않는 것이 목적)
 
 - 없을 수도 있는 요소(팝업 닫기 등) → `Driver.FindElementByCss(…, timeout:=3000, raise:=False)` + Is Nothing 검사(3초만 확인)
 - iframe 안의 없을 수도 있는 요소 → `Sel.FindInFrames("셀렉터", 3000)` + Is Nothing 검사(기본 10초를 기다리지 않도록 대기ms 를 짧게)
-- 반복문 안처럼 매번 즉시 확인해야 할 때 → 위 형식에 `timeout:=0` (기다리지 않음)
+- 반복문 안처럼 매번 즉시 확인해야 할 때 → `Driver.FindElementByCss(…, timeout:=0, raise:=False)` (기다리지 않음. `timeout:=0` 은 FindElementByCss 전용이며 `Sel.FindInFrames` 에는 쓰지 않는다)
 - 없을 수도 있는 목록 → `Driver.FindElementsByCss(…).Count` 로 분기(즉시 반환)
 - ※ 단수 탐색에서 `timeout:=` 을 빼먹으면 없을 때마다 10초를 기다리므로 반드시 명시한다
 
@@ -326,7 +327,7 @@ Public Keys As New Selenium.Keys
 
 - 요소를 못 찾았을 때, 오류가 났을 때, 완료를 알릴 때 등 사용자에게 보여 주는 모든 안내는 `Sel.PopUp "문구", ["제목"]` 로 쓴다. `MsgBox` 는 어떤 조각·통합 코드에서도 쓰지 않는다.
 - 표준 한 줄: 탐색은 `If 요소 Is Nothing Then Sel.PopUp "○○을 찾지 못했습니다.": Exit Sub`, 클릭은 절대 규칙 6
-- 모듈 함수(SafeClick·ClickByText·ClickByWebElements·NewTap_*·FindInFrames 등)는 실패 사유를 직접 실행 창에만 기록하고 사용자에게는 알리지 않는다 → 사용자 안내는 언제나 조각의 `Sel.PopUp` 한 번이다(이중 알림 없음). 예외는 둘이다: `Sel.Start_Chrome` 은 스스로 안내한 뒤 False 를 돌려주므로 골격은 `Exit Sub` 만 하고, `ETC.TableToSheet` 는 스스로 안내한 뒤 진행을 계속하므로 조각에서 안내를 덧붙이지 않는다.
+- 모듈 함수(SafeClick·ClickByText·ClickByWebElements·NewTab_*·FindInFrames 등)는 실패 사유를 직접 실행 창에만 기록하고 사용자에게는 알리지 않는다 → 사용자 안내는 언제나 조각의 `Sel.PopUp` 한 번이다(이중 알림 없음). 예외는 둘이다: `Sel.Start_Chrome` 은 스스로 안내한 뒤 False 를 돌려주므로 골격은 `Exit Sub` 만 하고, `ETC.TableToSheet` 는 스스로 안내한 뒤 진행을 계속하므로 조각에서 안내를 덧붙이지 않는다.
 - 실패 뒤 중단은 `Exit Sub` 로 한다. `End` 는 쓰지 않는다: End 는 Public 변수까지 초기화해 Driver 연결이 끊기고 브라우저가 닫혀 실패 화면을 확인할 수 없다. Exit Sub 면 브라우저가 실패 지점에 그대로 남는다. 조각을 별도 Sub 로 나눈 구조에서는 Exit Sub 가 호출한 쪽으로 돌아가므로, 그때는 Function 의 반환값이나 `Err.Raise` 로 실패를 올려 보낸다.
   - 예외: `M.AppFocus` 는 실패 시 매크로 전체가 종료됨(모듈이 직접 End 하므로 조각에서 따로 처리하지 않는다)
 - 키오스크 세션도 예외 없다(MsgBox 는 전체화면 크롬 뒤에 숨지만 `Sel.PopUp` 은 항상 맨 위에 뜬다).
@@ -448,7 +449,7 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 
 ### 새 탭
 
-- `Sel.NewTap_ByURL "URL"`(또는 `If Not Sel.NewTap_ByLinkText("문구") Then Sel.PopUp "…": Exit Sub` / `If Not Sel.NewTap_ByClick(요소) Then Sel.PopUp "…": Exit Sub`) → `Driver.SwitchToNextWindow` → `Sel.Wait 1` → 작업 → `Driver.SwitchToPreviousWindow` 복귀
+- `Sel.NewTab_ByURL "URL"`(또는 `If Not Sel.NewTab_ByLinkText("문구") Then Sel.PopUp "…": Exit Sub` / `If Not Sel.NewTab_ByClick(요소) Then Sel.PopUp "…": Exit Sub`) → `Driver.SwitchToNextWindow` → `Sel.Wait 1` → 작업 → `Driver.SwitchToPreviousWindow` 복귀
 
 ### 알림창(.Text 를 먼저 읽고 닫는다 ― 규칙 9)
 
@@ -544,6 +545,7 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ### 조각 모드(기본)
 
 - (1) 한두 줄 설명(전제·재사용 변수 언급 포함) → (2) 코드 조각(`vba` 코드 블록) 순서로 답한다.
+- 필요할 때만 코드 앞에 14-7 키오스크 안내 한 줄, 코드 뒤에 14-2 최후 수단 안내 한 줄을 붙인다.
 - 붙일 위치는 기본이 "직전 조각 다음(End Sub 바로 윗줄)"이므로 따로 말하지 않고, 위치가 다를 때(모듈 상단 등)만 안내한다.
 - 조각 앞뒤로 다른 설명을 장황하게 늘어놓지 않는다.
 

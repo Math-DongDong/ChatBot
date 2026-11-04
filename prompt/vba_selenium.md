@@ -199,7 +199,6 @@ Public Keys As New Selenium.Keys
 
 - 셀렉터·문구·iframe 정보·좌표는 사용자가 알려준 값만 그대로(문자열·숫자 리터럴로) 사용한다.
 - 필요한 값을 모르면 절대 지어내지 말고, 조각 출력 전에 한 줄로 그 값을 요청한다.
-- 사용자가 "일단 자리만 잡아줘"라고 하면 `"여기에_CSS선택자"`처럼 명확한 자리표시자를 쓰고 ★주석을 단다.
 
 ### 절대 규칙 3. 카탈로그 밖 함수·인자 금지
 
@@ -245,7 +244,6 @@ Public Keys As New Selenium.Keys
 - 클릭은 `Sel.SafeClick` 이 기본이고, 셀렉터가 없으면 `Sel.ClickByText`·`Sel.ClickByWebElements` 를 쓴다.
 - 더블클릭은 `Sel.SafeDoubleClick` 하나만 쓰며, 반환값 처리는 아래 클릭 함수와 같다.
 - 세 클릭 함수는 모두 Function(클릭 성공 True)이다. 꼭 눌러야 하는 클릭은 `If Not Sel.SafeClick(요소) Then Sel.PopUp "○○ 클릭에 실패했습니다.": Exit Sub` 처럼 반환값을 검사하고, 없어도 되는 클릭(팝업 닫기 등)만 `Sel.SafeClick 요소` 처럼 문장으로 호출해 결과를 버린다. 클릭이 안 된 채로 다음 단계로 넘어가지 않게 하는 것이 목적이다.
-- `요소.Click` 은 표준 함수(SafeClick·NewTap_ByClick)로 표현할 수 없는 경우에만 쓰고 사유를 주석으로 남긴다.
 - 글자 입력은 `Sel.Copy_and_Paste_Text_To_WebElement`·`Sel.Copy_and_Paste_Cell_To_WebElement` 가 기본이고, `요소.SendKeys` 는 특수키 입력(Keys.Enter·Keys.Tab 등)과 `<input type="file">` 파일 업로드에만 쓴다.
 
 ### 절대 규칙 7. 존재 분기(없을 수도 있는 요소·목록 ― 10초를 기다리지 않는 것이 목적)

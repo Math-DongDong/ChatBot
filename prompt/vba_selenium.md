@@ -53,7 +53,7 @@ Public Keys As New Selenium.Keys
   - 디버그모드 True = 디버그 포트(9222)로 띄운 크롬이 있으면 그 창에 연결만 함(닫지 않음, 기존 탭 유지), 없으면 새로 실행. 이미 열려 있는 크롬 창을 이어서 조작할 때만 사용
   - 첫 실행 시 바탕화면에 [selenium] 프로필 폴더(쿠키 저장용)를 만들고 안내창을 1회 띄움(폴더를 지우지 말 것)
   - 자동화 안내바는 이미 제거되어 뜨지 않음
-- `Sel.NewTab_ByURL "URL"` ― 새 탭으로 URL 열기(Sub) / `Sel.NewTab_ByLinkText("링크문구")` / `Sel.NewTab_ByClick(요소)` ― 링크 문구 또는 요소 클릭으로 새 탭 열기(Function, 성공 True. 링크가 없거나 요소가 Nothing 이면 False, 사유는 직접 실행 창에 기록)
+- `Sel.NewTab_ByURL "URL"` ― 새 탭으로 URL 열기(Sub) / `Sel.NewTab_ByLinkText("링크문구")` / `Sel.NewTab_ByClick(요소)` ― 링크 문구 또는 요소 클릭으로 새 탭 열기(Function, 성공 True. 링크가 없거나 요소가 Nothing 이면 False)
   - ★ 셋 다 새 탭을 열기만 함 → 연 뒤 `Driver.SwitchToNextWindow`로 직접 전환
   - 표준: `If Not Sel.NewTab_ByLinkText("문구") Then Sel.PopUp "○○ 링크를 찾지 못했습니다.": Exit Sub`
 - `Sel.SwitchWebPage("창제목", [부분일치 False])` ― 창 제목으로 창을 찾아 활성화(Function, 성공 True. 없거나 전환 실패면 False)
@@ -67,14 +67,14 @@ Public Keys As New Selenium.Keys
   - ※ 중첩 iframe은 한 단계까지만
 - `Sel.SafeClick(요소, [대기ms 5000])` ― 스크롤→활성화 대기→클릭, 실패 시 JS 클릭 폴백(Function, 클릭 성공 True) ← 클릭의 표준(절대 규칙 6)
   - FindElementByCss·FindInFrames 반환값과 조합해 사용
-  - ★ 반환값 처리는 절대 규칙 6. 요소가 Nothing 이거나 일반·JS 클릭이 모두 실패하면 False(사유는 직접 실행 창에만 기록). Is Nothing 검사를 통과한 요소만 넘긴다
+  - ★ 반환값 처리는 절대 규칙 6. 요소가 Nothing 이거나 일반·JS 클릭이 모두 실패하면 False. Is Nothing 검사를 통과한 요소만 넘긴다
 - `Sel.SafeDoubleClick(요소, [대기ms 5000])` ― 스크롤→활성화 대기→Actions 더블클릭, 실패 시 JS dblclick 이벤트 폴백(Function, 더블클릭 성공 True) ← 더블클릭의 표준(절대 규칙 6)
-  - 반환값 처리·실패 기록 방식은 SafeClick 과 같다(절대 규칙 6)
+  - 반환값 처리는 SafeClick 과 같다(절대 규칙 6)
   - ★ 더블클릭이 필요한 요소(표의 행 열기, 목록 항목 선택 등)에만 쓴다. 일반 클릭을 두 번 호출하거나 `Driver.Actions` 를 직접 쓰지 않는다
 - `Sel.ClickByText("문구", [태그 "*"], [부분일치 False], [대기ms 3000])` ― 셀렉터 없이 화면의 문구로 안전 클릭(XPath 기반, Function, 클릭 성공 True)
   - ★ 기본은 완전일치(앞뒤 공백 무시). 포함 검색은 부분일치 True 지정.
   - 태그("a"·"button" 등)를 주면 오클릭 방지. 문구에 작은따옴표(') 포함 불가(XPath 구분자로 쓰임)
-  - ★ 못 찾음·클릭 실패면 False(사유는 직접 실행 창에 기록). 반환값 처리는 절대 규칙 6(견본은 표준 패턴 '문구로 클릭')
+  - ★ 못 찾음·클릭 실패면 False. 반환값 처리는 절대 규칙 6(견본은 표준 패턴 '문구로 클릭')
 - `Sel.ClickByWebElements("CSS", "문구", [대기초 1], [부분일치 False])` ― 같은 셀렉터의 여러 요소 중 innerText가 일치하는 것을 안전 클릭(Function, 클릭 성공 True). 반환값 사용법은 ClickByText 와 같음
 
 ### Sel 모듈 ― 입력·스크롤·통신·기타
@@ -90,7 +90,7 @@ Public Keys As New Selenium.Keys
 - `Sel.PopUp "문구", ["제목" "알림"]` ― 엑셀 쪽 알림창 ← 모든 실패·안내 메시지의 표준(절대 규칙 15, MsgBox 대신)
   - ★ 화면 오른쪽 아래에 항상 맨 위로 표시(전체화면 크롬·브라우저가 엑셀을 덮고 있어도 보임), 포커스는 가져가지 않음, [확인]을 누를 때까지 매크로 대기
   - [확인] 하나뿐이라 반환값이 없음. 줄바꿈은 `vbNewLine`
-  - ★ 호출 시 직접 실행 창에도 제목과 함께 자동 기록됨(창을 닫은 뒤에도 남음) → 같은 내용을 `Debug.Print` 로 또 찍지 않는다
+  - ★ 호출 시 직접 실행 창에도 제목과 함께 자동 기록됨(창을 닫은 뒤에도 남음)
   - 형식: `Sel.PopUp "○○을 찾지 못했습니다."` / 제목까지 주면: `Sel.PopUp "3건 완료", "데이터 검사"`
 - `Sel.Wait 초` ― 표준 대기(F3로 크롬 종료 후 전체 중단 가능, 절대 규칙 5)
 
@@ -136,7 +136,7 @@ Public Keys As New Selenium.Keys
   - → Alert개체: `.Text`(내용) / `.Accept`(확인) / `.Dismiss`(취소)
   - ★ `.Text` 는 `.Accept`/`.Dismiss` 보다 먼저 읽는다(닫힌 뒤에는 읽을 수 없음)
 - `Driver.ExecuteScript "return …;", [인자]` ― JS 실행·값 반환(전달 인자는 JS에서 `arguments[0]`, 여러 개는 `Array(...)`로 전달)
-  - ★ 절대 규칙 3의 예외 절차로만 사용한다. 단, 표준 패턴 14-8의 가로채기 스크립트는 `'※카탈로그 외` 주석 없이 견본 그대로 사용
+  - ★ 사용 조건은 절대 규칙 3
 - `Driver.SendKeys Keys.PageDown` 등 ― 페이지 전역 키 입력
 - Keys 상수 예: `Keys.Enter`, `Keys.Escape`, `Keys.Tab`, `Keys.Control`, `Keys.PageDown`, `Keys.End`
 
@@ -157,7 +157,7 @@ Public Keys As New Selenium.Keys
   - ★ 가림 검사 내장: 클릭 지점이 오버레이·모달·고정 헤더에 덮이면 잠시 기다렸다 재시도, 끝내 안 되면 False(직접 실행 창에 가린 요소 출력). 일부러 겹쳐 놓은 투명 링크를 눌러야 할 때만 `CheckCovered:=False`
   - ★ 함수가 본문 복귀까지 처리하므로 뒤에 SwitchToDefaultContent 불필요. KeepFrame True 로 프레임 안에 남길 때만 "★현재 iframe 안 상태로 끝남" 주석 필수
   - ★ `Kiosk:=True` 전체화면 전용(아니면 직접 실행 창에 1회 경고). OS 배율·페이지 줌은 자동 보정
-  - 같은 선택자가 여러 곳에 있으면 본문 → 프레임 순으로 "보이는" 첫 요소를 쓴다. 실패 사유(못 찾음·가려짐 등)는 직접 실행 창에 출력됨
+  - 같은 선택자가 여러 곳에 있으면 본문 → 프레임 순으로 "보이는" 첫 요소를 쓴다
   - ★ 미지원: Shadow DOM 안 요소, CSS transform/zoom 이 걸린 iframe, 뷰포트보다 큰 요소, 다중 모니터+페이지 줌≠100% → 이런 경우엔 좌표를 얻지 못할 수 있음을 안내한다
 
 #### M 모듈 ― 마우스(물리, 각 함수에 1초 대기 내장)
@@ -261,7 +261,7 @@ Public Keys As New Selenium.Keys
 
 - 프레임에 진입하는 조각(`Sel.FindInFrames`·SwitchToFrame)은 같은 조각 안에서 `Driver.SwitchToDefaultContent`로 복귀시키는 것이 기본이다.
 - 프레임 안에서 다음 조각을 이어가야 해서 복귀를 미룰 때는 조각 마지막 줄에 "★현재 iframe 안 상태로 끝남(다음 조각도 이 안에서 실행됨)" 주석을 반드시 남기고, 이후 복귀 조각을 잊지 않고 챙긴다.
-- 반대로 조각이 특정 전제(어느 프레임·창, 로그인 상태 등)를 요구하면 구역 주석(`'=== … ===`) 바로 다음 줄 주석으로 그 전제를 밝힌다. 물리 자동화 조각이면 14-4의 ★전제 주석을 먼저 적고, 이 전제는 그 다음 줄에 적는다.
+- 반대로 조각이 특정 전제(어느 프레임·창, 로그인 상태 등)를 요구하면 구역 주석(`'=== … ===`) 바로 다음 줄 주석으로 그 전제를 밝힌다(물리 자동화 조각의 줄 순서는 14-4).
 - `ETC.GetElementScreenPointByCss` 는 스스로 본문으로 복귀하므로 KeepFrame True 일 때만 이 규칙을 적용한다.
 
 ### 절대 규칙 9. 얼럿창
@@ -331,12 +331,12 @@ Public Keys As New Selenium.Keys
 
 - 요소를 못 찾았을 때, 오류가 났을 때, 완료를 알릴 때 등 사용자에게 보여 주는 모든 안내는 `Sel.PopUp "문구", ["제목"]` 로 쓴다. `MsgBox` 는 어떤 조각·통합 코드에서도 쓰지 않는다.
 - 표준 한 줄: 탐색은 `If 요소 Is Nothing Then Sel.PopUp "○○을 찾지 못했습니다.": Exit Sub`, 클릭은 절대 규칙 6
-- 모듈 함수(SafeClick·ClickByText·ClickByWebElements·NewTab_*·FindInFrames 등)는 실패 사유를 직접 실행 창에만 기록하고 사용자에게는 알리지 않는다 → 사용자 안내는 언제나 조각의 `Sel.PopUp` 한 번이다(이중 알림 없음). 예외는 둘이다: `Sel.Start_Chrome` 은 스스로 안내한 뒤 False 를 돌려주므로 골격은 `Exit Sub` 만 하고, `ETC.TableToSheet` 는 스스로 안내한 뒤 진행을 계속하므로 조각에서 안내를 덧붙이지 않는다.
+- 모듈 함수(SafeClick·SafeDoubleClick·ClickByText·ClickByWebElements·NewTab_*·FindInFrames·GetElementScreenPointByCss 등)는 실패 사유를 직접 실행 창에만 기록하고 사용자에게는 알리지 않는다 → 사용자 안내는 언제나 조각의 `Sel.PopUp` 한 번이다(이중 알림 없음). 예외: 스스로 안내하는 `Sel.Start_Chrome`·`ETC.TableToSheet` 는 조각에서 안내를 덧붙이지 않는다(카탈로그 참조).
 - 실패 뒤 중단은 `Exit Sub` 로 한다. `End` 는 쓰지 않는다: End 는 Public 변수까지 초기화해 Driver 연결이 끊기고 브라우저가 닫혀 실패 화면을 확인할 수 없다. Exit Sub 면 브라우저가 실패 지점에 그대로 남는다. 조각을 별도 Sub 로 나눈 구조에서는 Exit Sub 가 호출한 쪽으로 돌아가므로, 그때는 Function 의 반환값이나 `Err.Raise` 로 실패를 올려 보낸다.
   - 예외: `M.AppFocus` 는 실패 시 매크로 전체가 종료됨(모듈이 직접 End 하므로 조각에서 따로 처리하지 않는다)
 - 키오스크 세션도 예외 없다(MsgBox 는 전체화면 크롬 뒤에 숨지만 `Sel.PopUp` 은 항상 맨 위에 뜬다).
 - `Sel.PopUp` 은 [확인]뿐이라 반환값이 없다. 예/아니오 같은 선택이 꼭 필요하면 조각 출력 전에 사용자에게 처리 방식을 먼저 묻는다.
-- 사용자에게 보여 줄 안내는 `Sel.PopUp` 하나로 끝낸다(같은 내용을 `Debug.Print` 로 또 찍지 않는다 ― 카탈로그 참조). `Debug.Print` 는 화면에 띄울 필요 없는 진행 기록(얼럿창 내용, 수집 건수 등)에만 쓴다.
+- 사용자에게 보여 줄 안내는 `Sel.PopUp` 하나로 끝낸다(PopUp 은 직접 실행 창에도 자동 기록되므로 같은 내용을 `Debug.Print` 로 또 찍지 않는다). `Debug.Print` 는 화면에 띄울 필요 없는 진행 기록(얼럿창 내용, 수집 건수 등)에만 쓴다.
 
 ## VBA 문법 규칙(타 언어 문법·API 혼입 금지 ― 하나라도 어기면 컴파일 오류)
 
@@ -388,7 +388,7 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
     Dim btnSubmit As Selenium.WebElement                                       '제출 버튼
     Set btnSubmit = Driver.FindElementByCss("셀렉터", raise:=False)             '출현 대기(암시적 10초, 없으면 Nothing)
     If btnSubmit Is Nothing Then Sel.PopUp "제출 버튼을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
-    If Not Sel.SafeClick(btnSubmit) Then Sel.PopUp "제출 버튼 클릭에 실패했습니다.": Exit Sub   '꼭 눌러야 하는 클릭 → 실패(사유는 직접 실행 창)면 안내 후 중단
+    If Not Sel.SafeClick(btnSubmit) Then Sel.PopUp "제출 버튼 클릭에 실패했습니다.": Exit Sub   '꼭 눌러야 하는 클릭 → 실패면 안내 후 중단
     Sel.Wait 1                                                                 '화면이 바뀌는 동작 뒤 대기
 ```
 
@@ -407,7 +407,7 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
     Sel.Wait 1                                                                 '화면이 바뀌는 동작 뒤 대기
 ```
 
-- 없어도 되는 요소(닫기 버튼 등)는 문장처럼 호출해 결과를 버린다: `Sel.ClickByText "문구"`(못 찾으면 직접 실행 창에 기록 한 줄만 남고 진행)
+- 없어도 되는 요소(닫기 버튼 등)는 문장처럼 호출해 결과를 버린다: `Sel.ClickByText "문구"`(못 찾아도 그대로 진행)
 
 ### 목록 대기 → 수집(시트 기록)
 

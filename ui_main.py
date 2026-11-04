@@ -8,7 +8,7 @@ import uuid
 import streamlit as st
 from PIL import Image
 
-from config import MODEL_OPTIONS, MODEL_NAME_MAP, get_feature, logger
+from config import MODEL_OPTIONS, get_feature, get_model_name, logger
 from callbacks import reset_chat_session_on_model_change
 from session import reset_session_for_new_chat
 from chat_engine import initialize_chat_session, send_chat_response
@@ -178,7 +178,9 @@ def _handle_user_input(chat):
                 project_type = st.session_state.get(
                     "active_project_type", "unknown"
                 )
-                model_name = MODEL_NAME_MAP.get(selected_model_label, "unknown")
+                model_name = get_model_name(
+                    selected_model_label, paid=project_type == "paid"
+                )
                 logger.exception(
                     "request_failed request_id=%s project=%s model=%s",
                     request_id,

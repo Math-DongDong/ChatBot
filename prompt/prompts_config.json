@@ -1,8 +1,12 @@
 {
+  "models": {
+    "free": "gemini-3.5-flash-lite",
+    "paid": "gemini-3.6-flash",
+    "image": "gemini-3.1-flash-image"
+  },
   "features": [
     {
       "label": "Gemini 3.5 Flash Lite",
-      "model": "gemini-3.5-flash-lite",
       "type": "free",
       "prompt_file": null,
       "description": "무료 기본 모델",
@@ -10,7 +14,6 @@
     },
     {
       "label": "프론트엔드 개발",
-      "model": "gemini-3.6-flash",
       "type": "paid_or_free",
       "prompt_file": "Frontend.md",
       "guide_file": "githubpage.md",
@@ -20,7 +23,6 @@
     },
     {
       "label": "구글시트 기반 웹 앱 개발",
-      "model": "gemini-3.6-flash",
       "type": "paid_or_free",
       "prompt_file": "googlesheetapp.md",
       "guide_file": "appscriptguide.md",
@@ -30,7 +32,6 @@
     },
     {
       "label": "깊이 있는 수학수업",
-      "model": "gemini-3.6-flash",
       "type": "paid_or_free",
       "prompt_file": "middleschoolcurriculum.md",
       "description": "수학수업을 설계할 때 도움을 받을 수 있습니다.\n\n현재 무료 버전으로 사용 중이며 유료 버전으로 사용하려면 사이드바에 GEMINI 사용 키를 등록하세요.",
@@ -40,7 +41,7 @@
     },
     {
       "label": "이미지 생성",
-      "model": "gemini-3.1-flash-image",
+      "model_role": "image",
       "type": "paid_only",
       "prompt_file": null,
       "description": "이미지 생성을 사용하려면 사이드바에 GEMINI 사용 키를 등록해주세요.",
@@ -48,15 +49,13 @@
     },
     {
       "label": "Selenium VBA 코드 작성",
-      "model": "gemini-3.6-flash",
       "type": "paid_or_free",
       "prompt_file": "vba_selenium.md",
-      "description": "Selenium VBA를 이용해서 크롬 웹 자동화를 구현할 수 있습니다.\n\n현재 무료 버전으로 사용 중이며 유료 버전으로 사용하려면 사이드바에 GEMINI 사용 키를 등록하세요.",
+      "description": "Selenium VBA를 이용해서 크롬 웹 자동화를 구현할 수 있습니다.\n\n■ 사용 순서\n1. 시작: \"시작 코드 줘. 주소는 https://… 야\"\n2. 한 단계씩 요청: 셀렉터와 할 일을 함께 알려 주세요.\n• \"아이디 입력창 셀렉터는 #user_id, 아이디는 A1셀에 있어\"\n• \"로그인 버튼은 iframe 안에 있고 셀렉터는 button.login이야\"\n• \"게시판 목록(셀렉터 .list li)의 제목을 A열에 적어 줘\"\n• \"이 페이지의 표를 시트에 통째로 가져와 줘\"\n3. 받은 코드 조각을 End Sub 바로 윗줄에 이어 붙이세요.\n4. 마무리: \"지금까지 코드 합쳐 줘\"라고 하면 하나의 완성된 매크로로 정리해 줍니다.\n\n※ 아이디·비밀번호는 채팅에 직접 적지 말고 엑셀 셀에 적어 둔 뒤 셀 위치(A1 등)만 알려 주세요.\n\n■ 셀렉터 찾는 법: 크롬에서 F12 → 원하는 요소에 마우스 오른쪽 클릭 → [복사] → [selector 복사]\n\n■ 셀렉터로 안 될 때: \"마우스로 직접 클릭해 줘\"처럼 요청하면 물리 클릭·키보드 입력 방식으로 만들어 줍니다.\n\n현재 무료 버전으로 사용 중이며 유료 버전으로 사용하려면 사이드바에 GEMINI 사용 키를 등록하세요.",
       "has_html_preview": false
     },
     {
       "label": "한글 자동화 VBA 코드 작성",
-      "model": "gemini-3.6-flash",
       "type": "paid_or_free",
       "prompt_file": "vba_hwp.md",
       "description": "한글문서를 VBA를 이용해서 생성할 수 있습니다.\n\n■ 새 문서 초안: 만들고 싶은 문서를 설명하면 됩니다.\n\n■ 기존 한글 문서 수정: 고칠 위치를 아래 방법 중 하나로 알려 주세요.\n• 누름틀: 문서에 누름틀이 있다면 누름틀 이름을 알려 주세요.\n• 표·셀 위치: \"2번째 표의 3행 2열\"처럼 알려 주세요. (병합된 칸이 많은 표는 \"'신청인 성명' 칸 오른쪽 셀\"처럼 칸 안의 문구로 알려 주세요)\n• 표식 문자: 고칠 자리에 @@1, @@2 같은 표식을 미리 적어 두고 \"@@1 자리에 표 삽입\"처럼 알려 주세요. (같은 문서를 자주 고칠 때 적합)\n• 직접 지정: \"실행 중에 직접 위치를 고를게\"라고 하면, 실행 중 안내창이 뜰 때 넣을 곳에 캐럿을 두고 [확인]을 누르면 됩니다. (위치가 매번 다를 때 적합)\n\n현재 무료 버전으로 사용 중이며 유료 버전으로 사용하려면 사이드바에 GEMINI 사용 키를 등록하세요.",

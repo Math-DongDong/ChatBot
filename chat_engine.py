@@ -16,8 +16,8 @@ from PIL import Image
 
 from config import (
     MODEL_OPTIONS,
-    MODEL_NAME_MAP,
     get_feature,
+    get_model_name,
     get_prompt_for_feature,
     logger,
 )
@@ -50,26 +50,27 @@ def resolve_runtime_model() -> tuple[str, str, str | None, str]:
 
     if feature_type == "paid_or_free":
         if paid_api_key and st.session_state.get("api_key_configured", False):
-            return selected_label, MODEL_NAME_MAP[selected_label], paid_api_key, "paid"
+            return selected_label, get_model_name(selected_label, paid=True), paid_api_key, "paid"
         # 유료키 없으면 무료 모델로 폴백
         free_label = MODEL_OPTIONS[0]
         return (
             free_label,
-            MODEL_NAME_MAP[free_label],
+            get_model_name(free_label, paid=False),
             st.secrets.get("default_api_key"),
             "free",
         )
 
     if feature_type == "paid_only":
+        model_name = get_model_name(selected_label, paid=True)
         if paid_api_key and st.session_state.get("api_key_configured", False):
-            return selected_label, MODEL_NAME_MAP[selected_label], paid_api_key, "paid"
-        return selected_label, MODEL_NAME_MAP[selected_label], None, "paid"
+            return selected_label, model_name, paid_api_key, "paid"
+        return selected_label, model_name, None, "paid"
 
     # free 타입
     free_label = MODEL_OPTIONS[0]
     return (
         free_label,
-        MODEL_NAME_MAP[free_label],
+        get_model_name(free_label, paid=False),
         st.secrets.get("default_api_key"),
         "free",
     )
@@ -243,9 +244,7 @@ def send_chat_response(chat_context, content_parts: list, model_label: str) -> t
     응답 후 최종 interaction id를 st.session_state.last_interaction_id에 저장한다.
     """
     feature = get_feature(model_label)
-    is_image_model = feature.get("type") == "paid_only" and "image" in feature.get(
-        "model", ""
-    )
+    is_image_model = feature.get("model_role") == "image"
 
     client = chat_context["client"]
     model_name = chat_context["model_name"]

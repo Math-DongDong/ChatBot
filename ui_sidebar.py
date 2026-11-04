@@ -190,7 +190,7 @@ def _render_html_preview_section():
 
 def _render_summary_export_section(feature: dict):
     """대화내용 요약 → 미리보기 → 다운로드 버튼을 순서대로 렌더링"""
-    from config import MODEL_NAME_MAP, MODEL_OPTIONS
+    from config import MODEL_OPTIONS, get_model_name
 
     st.subheader("📄 대화내용 요약하기")
 
@@ -216,10 +216,9 @@ def _render_summary_export_section(feature: dict):
                 else st.secrets.get("default_api_key")
             )
             selected_label = st.session_state.get("selected_gemini_model", MODEL_OPTIONS[0])
-            if st.session_state.get("api_key_configured", False):
-                model_name = MODEL_NAME_MAP.get(selected_label, MODEL_NAME_MAP.get(MODEL_OPTIONS[0], ""))
-            else:
-                model_name = MODEL_NAME_MAP.get(MODEL_OPTIONS[0], "")
+            model_name = get_model_name(
+                selected_label, paid=st.session_state.get("api_key_configured", False)
+            )
 
             with st.spinner("AI가 대화 내용을 분석하여 HTML 문서를 생성 중입니다... ⏳"):
                 html_code, error_msg = summarize_conversation(

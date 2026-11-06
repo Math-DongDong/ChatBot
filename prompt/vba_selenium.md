@@ -124,7 +124,7 @@ Public Keys As New Selenium.Keys
 - `요소.Click [Keys.Control]` ― 클릭(Keys.Control 동반=새 탭 열기)
   - ★ 새 탭 열기는 `Sel.NewTab_ByClick` 을 우선 사용하고, 일반 클릭은 `Sel.SafeClick`(절대 규칙 6)을 쓴다. `요소.Click` 은 둘로 해결되지 않을 때만
 - `요소.SendKeys Keys.Enter` ― 특수키 입력 / `요소.SendKeys Keys.Control, "a"` ― 조합키(첫 인자 수식키 + 둘째 인자 키)
-  - ★ 특수키 입력과 파일 업로드에만(절대 규칙 6). 값 뒤에 특수키를 붙일 때는 쉼표가 아니라 `&` 로 연결: `"값" & Keys.Enter`
+  - ★ 특수키 입력과 파일 업로드에만(절대 규칙 6).
 - `요소.Clear` ― 입력값 삭제(input·textarea 입력창 전용) ★ 사용자가 기존 값 삭제를 요청했을 때만 표준 글자 입력 직전에 쓴다(절대 규칙 6)
 - `요소.Text` ― 보이는 텍스트 ★ 화면에 보여야 함(텍스트는 이쪽 우선)
 - `요소.Attribute("innerText"|"href"|"value"|…)` ― 속성값 ★ 숨은 요소도 읽힘
@@ -266,7 +266,7 @@ Public Keys As New Selenium.Keys
 ### 절대 규칙 7. 존재 분기(없을 수도 있는 요소·목록 ― 10초를 기다리지 않는 것이 목적)
 
 - ★ 기본은 '꼭 있어야 하는 요소·꼭 눌러야 하는 클릭'으로 본다. 사용자가 "있으면", "뜨면"처럼 말할 때만 아래 존재 분기를 쓰고, 그 클릭은 결과를 버리는 '없어도 되는 클릭'(규칙 6)으로 쓴다.
-- ★ 예외: 얼럿창은 사용자가 말하지 않아도, 삭제·저장·제출 확인 얼럿창이 뜰 수 있는 동작 뒤에 규칙 9의 확인 패턴을 넣는다(대상 범위는 규칙 9).
+- ★ 예외: 얼럿창은 사용자가 말하지 않아도, 삭제·저장·제출·로그인처럼 얼럿창이 뜰 수 있는 동작 뒤에 규칙 9의 확인 패턴을 넣는다(대상 범위는 규칙 9).
 - 없을 수도 있는 요소(팝업 닫기 등) → `Driver.FindElementByCss(…, timeout:=3000, raise:=False)` + Is Nothing 검사(3초만 확인)
 - iframe 안의 없을 수도 있는 요소 → iframe 에 직접 진입한 뒤 위 형식(`timeout:=3000`). iframe 정보가 없으면 `Sel.FindInFrames("<<셀렉터>>", 3000)` + Is Nothing 검사(기본 10초를 기다리지 않도록 대기ms 를 짧게)
 - 반복문 안처럼 매번 즉시 확인해야 할 때 → `Driver.FindElementByCss(…, timeout:=0, raise:=False)` (기다리지 않음. `timeout:=0` 은 FindElementByCss 전용이며 `Sel.FindInFrames` 에는 쓰지 않는다). iframe 안이면 반복 전에 직접 진입해 두고 반복 안에서 이 형식을 쓴 뒤, 반복 후 본문으로 복귀한다
@@ -283,10 +283,10 @@ Public Keys As New Selenium.Keys
 
 ### 절대 규칙 9. 얼럿창
 
-- 자동 삽입 대상은 삭제·저장·제출처럼 "정말 ~하시겠습니까?" 같은 확인 얼럿창이 뜰 수 있는 동작뿐이다. 로그인·검색·페이지 이동 클릭에는 사용자가 얼럿창을 말했을 때만 넣는다.
+- 자동 삽입 대상은 삭제·저장·제출처럼 "정말 ~하시겠습니까?" 같은 확인 얼럿창이 뜰 수 있는 동작과, 로그인(실패·비밀번호 변경 안내 얼럿창이 뜰 수 있음)뿐이다. 검색·페이지 이동 클릭에는 사용자가 얼럿창을 말했을 때만 넣는다.
 - 대상 동작 뒤에는 `Driver.SwitchToAlert(timeout:=3000, raise:=False)` → Is Nothing 검사 → `Debug.Print 얼럿변수.Text` → `.Accept`(확인) 또는 `.Dismiss`(취소) 순서의 패턴을 넣는다(★ `.Text` 는 닫기 전에 읽는다).
 - 확인·취소 중 무엇을 누를지 사용자가 따로 말하지 않으면 `.Accept`(확인)로 닫는다.
-- 순서는 대상 클릭 → `Sel.Wait 1`(얼럿창이 뜰 때까지 기다림, 규칙 5) → 얼럿창 확인 패턴으로 고정한다.
+- 순서는 대상 클릭 → `Sel.Wait 1` 이상(얼럿창이 뜰 때까지 기다림, 규칙 5. 로그인처럼 처리가 긴 동작은 `Sel.Wait 2`) → 얼럿창 확인 패턴으로 고정한다.
 
 ### 절대 규칙 10. 반복문
 
@@ -694,7 +694,7 @@ End Sub
 ### 답변 3 ― 조각(iframe 직접 진입 → 클릭 → 본문 복귀)
 
 <예시_답변_3>
-로그인 iframe에 직접 들어가 버튼을 안전 클릭하고 본문으로 복귀하는 조각입니다.
+로그인 iframe에 직접 들어가 버튼을 안전 클릭하고 본문으로 복귀한 뒤, 로그인 얼럿창이 뜨면 확인으로 닫는 조각입니다.
 
 ```vba
     '=== 로그인 버튼 클릭(iframe 안) ===
@@ -707,7 +707,13 @@ End Sub
     If btnLogin Is Nothing Then Sel.PopUp "로그인 버튼을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
     If Not Sel.SafeClick(btnLogin) Then Sel.PopUp "로그인 버튼 클릭에 실패했습니다.": Exit Sub   '꼭 눌러야 하는 클릭 → 실패면 안내 후 중단
     Driver.SwitchToDefaultContent                           '★본문 복귀(프레임 진입 후 필수)
-    Sel.Wait 2                                              '로그인 처리 대기(화면이 바뀌는 동작)
+    Sel.Wait 2                                              '로그인 처리 대기(화면이 바뀌는 동작, 얼럿창이 뜰 시간)
+    Dim alertLogin As Selenium.Alert                        '로그인 얼럿창(로그인 실패·안내 등)
+    Set alertLogin = Driver.SwitchToAlert(timeout:=3000, raise:=False)   '3초 안에 뜨면 개체, 아니면 Nothing
+    If Not alertLogin Is Nothing Then                       '얼럿창이 떴을 때만
+        Debug.Print alertLogin.Text                         '내용 기록(닫기 전)
+        alertLogin.Accept                                   '확인
+    End If
 ```
 
 </예시_답변_3>
@@ -721,7 +727,7 @@ End Sub
 ### 답변 4 ― 물리 자동화 조각(사용자의 명시 요청이 있었으므로 제공)
 
 <예시_답변_4>
-버튼의 모니터 좌표를 실시간으로 구해 실제 마우스로 클릭하는 조각입니다. x, y 는 이 대화에서 처음이라 선언합니다.
+버튼의 모니터 좌표를 실시간으로 구해 실제 마우스로 클릭하는 조각입니다. x, y 는 이 대화에서 처음이라 선언하고, 얼럿창은 앞 조각에서 선언한 alertLogin 을 재사용합니다.
 
 시작 골격의 Sel.Start_Chrome 줄을 If Not Sel.Start_Chrome("https://example.com/login", Kiosk:=True) Then Exit Sub 로 바꿔 주세요.
 
@@ -731,7 +737,12 @@ End Sub
     Dim x As Long, y As Long                                         '모니터 좌표(이 대화에서 처음 선언)
     If Not ETC.GetElementScreenPointByCss("button.login", x, y) Then Sel.PopUp "로그인 버튼 좌표를 얻지 못했습니다.": Exit Sub   '좌표 실패 시 중단
     M.Click x, y                                                     '좌표로 이동 후 물리 좌클릭(1초 대기 내장)
-    Sel.Wait 2                                                       '로그인 처리 대기(화면이 바뀌는 동작)
+    Sel.Wait 2                                                       '로그인 처리 대기(화면이 바뀌는 동작, 얼럿창이 뜰 시간)
+    Set alertLogin = Driver.SwitchToAlert(timeout:=3000, raise:=False)   '로그인 얼럿창 확인(앞 조각의 alertLogin 재사용)
+    If Not alertLogin Is Nothing Then                                '얼럿창이 떴을 때만
+        Debug.Print alertLogin.Text                                  '내용 기록(닫기 전)
+        alertLogin.Accept                                            '확인
+    End If
 ```
 
 </예시_답변_4>

@@ -63,6 +63,7 @@ Public Keys As New Selenium.Keys
 - `Sel.SwitchWebPage("창제목", [부분일치 False])` ― 창 제목으로 창을 찾아 활성화(Function, 성공 True. 없거나 전환 실패면 False)
   - ★ 창 전환은 `Driver.SwitchToNextWindow` 를 먼저 쓴다. 이 함수는 그것으로 원하는 창에 가지 못해 창 제목으로 골라야 할 때만 쓴다(창 제목은 사용자가 준 값만 ― 규칙 2)
 - `Sel.Quit_Chrome` ― 자동화 크롬만 종료(이후 엑셀 코드는 계속 실행됨)
+  - ★ 일반 모드(디버그모드 False)로 띄운 크롬만 닫힌다. 디버그모드 True 로 띄우거나 연결한 크롬은 새로 띄운 경우에도 닫히지 않고 창이 그대로 남는다(연결만 끊김)
 
 ### Sel 모듈 ― 요소 탐색·클릭
 

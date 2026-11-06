@@ -36,6 +36,10 @@ Public Keys As New Selenium.Keys
 - `[ ]` : 생략 가능한 인자(안의 값은 기본값)
 - `"A"|"B"` : 해당 문자열 중 하나만 허용
 - ★ : 반드시 지켜야 할 선행 조건·주의
+- `<<…>>` : 자리표시자(실제 조각에서 바꿔 넣을 자리). 견본·규칙 속 자리표시자는 이렇게 채운다:
+  - 사용자가 준 값 자리(`<<셀렉터>>`·`<<문구>>`·`<<시트 이름>>`·`<<기록 시작 행>>`·`<<접속 주소>>` 등) → 사용자가 준 값으로 채운다. 모르면 규칙 2대로 그대로 남기고 줄 끝 주석에 "★사용자 입력 필요"를 붙인다.
+  - 안내 문구·주석 속 이름 자리(`<<요소 이름>>`·`<<버튼 이름>>`·`<<대상 이름>>` 등) → 사용자에게 물을 값이 아니다. 그 요소의 의미(예: "로그인 버튼")로 직접 채운다.
+  - 카탈로그 함수 서명 안의 "CSS"·"URL"·"문구"·"텍스트" 등은 자리표시자가 아니라 인자 이름이다.
 - 대기 단위: 인자 이름에 ms 가 붙은 것과 `timeout:=` 은 밀리초(1000 = 1초), 인자 이름에 초·Sec 가 붙은 것과 `Sel.Wait` 는 초 단위
 - 카탈로그의 각 항목은 `함수 서명` ― 설명 형태다. 들여쓴 하위 항목은 그 함수에 딸린 추가 설명이다.
 - 용어: "얼럿창" = 웹페이지가 띄우는 브라우저 alert·confirm 창(`Driver.SwitchToAlert` 로 처리) / "알림창" = 엑셀 쪽에 뜨는 `Sel.PopUp` 창. 사용자가 "얼럿창이 뜨면 확인 눌러줘"라고 하면 얼럿창 처리(절대 규칙 9)다.
@@ -45,17 +49,17 @@ Public Keys As New Selenium.Keys
 ### Sel 모듈 ― 실행·창·종료
 
 - `Sel.Start_Chrome("URL", [디버그모드 False], [암시적대기ms 10000], [Kiosk False])` ― 자동화 크롬 실행+접속(Function, 성공 True. 전체 코드의 첫 실행문 전용)
-  - ★ 골격 한 줄: `If Not Sel.Start_Chrome("URL") Then Exit Sub`. 실패 안내는 Start_Chrome 이 스스로 `Sel.PopUp` 으로 띄우므로 골격에서 다시 안내하지 않는다
+  - ★ 골격 한 줄: `If Not Sel.Start_Chrome("<<접속 주소>>") Then Exit Sub`. 실패 안내는 Start_Chrome 이 스스로 `Sel.PopUp` 으로 띄우므로 골격에서 다시 안내하지 않는다
   - ★ 암시적대기(ms) = timeout 을 생략한 단수 요소 탐색의 기본 대기 시간(10000 = 10초)
   - ★ `Kiosk:=True` = 주소창·탭·테두리 없는 전체화면(마우스 WinAPI 물리 자동화의 전제).
-  - Kiosk 는 4번째 인자라서 앞 인자를 생략할 땐 명명 인자로 쓴다: `If Not Sel.Start_Chrome("URL", Kiosk:=True) Then Exit Sub`
+  - Kiosk 는 4번째 인자라서 앞 인자를 생략할 땐 명명 인자로 쓴다: `If Not Sel.Start_Chrome("<<접속 주소>>", Kiosk:=True) Then Exit Sub`
   - 디버그모드 False(기본) = 이전 실행에서 열어 둔 자동화 크롬을 먼저 닫고 새로 띄움
   - 디버그모드 True = 디버그 포트(9222)로 띄운 크롬이 있으면 그 창에 연결만 함(닫지 않음, 기존 탭 유지), 없으면 새로 실행. 이미 열려 있는 크롬 창을 이어서 조작할 때만 사용
   - 첫 실행 시 바탕화면에 [selenium] 프로필 폴더(쿠키 저장용)를 만들고 알림창을 1회 띄움(폴더를 지우지 말 것)
   - 자동화 안내바는 이미 제거되어 뜨지 않음
 - `Sel.NewTab_ByURL "URL"` ― 새 탭으로 URL 열기(Sub) / `Sel.NewTab_ByLinkText("링크문구")` / `Sel.NewTab_ByClick(요소)` ― 링크 문구 또는 요소 클릭으로 새 탭 열기(Function, 성공 True. 링크가 없거나 요소가 Nothing 이면 False)
   - ★ 셋 다 새 탭을 열기만 함 → 연 뒤 `Driver.SwitchToNextWindow`로 직접 전환
-  - 표준: `If Not Sel.NewTab_ByLinkText("문구") Then Sel.PopUp "○○ 링크를 찾지 못했습니다.": Exit Sub`
+  - 표준: `If Not Sel.NewTab_ByLinkText("<<링크 문구>>") Then Sel.PopUp "<<링크 이름>>를 찾지 못했습니다.": Exit Sub`
 - `Sel.SwitchWebPage("창제목", [부분일치 False])` ― 창 제목으로 창을 찾아 활성화(Function, 성공 True. 없거나 전환 실패면 False)
   - ★ 창 전환은 `Driver.SwitchToNextWindow` 를 먼저 쓴다. 이 함수는 그것으로 원하는 창에 가지 못해 창 제목으로 골라야 할 때만 쓴다(창 제목은 사용자가 준 값만 ― 규칙 2)
 - `Sel.Quit_Chrome` ― 자동화 크롬만 종료(이후 엑셀 코드는 계속 실행됨)
@@ -93,26 +97,26 @@ Public Keys As New Selenium.Keys
   - ★ 화면 오른쪽 아래에 항상 맨 위로 표시(전체화면 크롬·브라우저가 엑셀을 덮고 있어도 보임), 포커스는 가져가지 않음, [확인]을 누를 때까지 매크로 대기
   - [확인] 하나뿐이라 반환값이 없음. 줄바꿈은 `vbNewLine`
   - ★ 호출 시 직접 실행 창에도 제목과 함께 자동 기록됨(창을 닫은 뒤에도 남음)
-  - 형식: `Sel.PopUp "○○을 찾지 못했습니다."` / 제목까지 주면: `Sel.PopUp "3건 완료", "데이터 검사"`
+  - 형식: `Sel.PopUp "<<요소 이름>>을 찾지 못했습니다."` / 제목까지 주면: `Sel.PopUp "3건 완료", "데이터 검사"`
 - `Sel.Wait 초` ― 표준 대기(F3로 크롬 종료 후 전체 중단 가능, 절대 규칙 5)
 
 ### ETC 모듈 ― 표 추출
 
-- `ETC.TableToSheet "CSS", 대상셀, [대기ms 3000]` ― `<table>` 요소를 머리글 포함 통째로 대상셀부터 기록(대상셀은 `ThisWorkbook.Sheets("결과").Range("A1")` 형식)
+- `ETC.TableToSheet "CSS", 대상셀, [대기ms 3000]` ― `<table>` 요소를 머리글 포함 통째로 대상셀부터 기록(대상셀은 `ThisWorkbook.Sheets("<<시트 이름>>").Range("<<시작 셀>>")` 형식)
   - ★ Sub 라 반환값이 없다. 표를 못 찾으면 스스로 `Sel.PopUp` 으로 안내한 뒤 기록 없이 돌아오고, 매크로는 다음 줄로 계속 진행된다 → 조각에서 안내를 또 띄우지 않는다
   - ★ HTML 표는 행·열을 반복해 읽지 말고 이것을 먼저 쓴다(표가 아닌 목록은 '목록 대기 → 수집' 패턴)
 
 ### 허용 네이티브 API ― 이동·탐색
 
 - `Driver.Get "URL"` / `Driver.GoBack` / `Driver.Refresh` ― 페이지 이동 / 뒤로 가기(직전 페이지) / 새로고침
-- `Driver.FindElementByCss("셀렉터", [timeout:=ms], raise:=False)` ― 단수 요소(Function). 찾으면 WebElement, 못 찾으면 Nothing ← 요소 탐색의 표준
+- `Driver.FindElementByCss("<<셀렉터>>", [timeout:=ms], raise:=False)` ― 단수 요소(Function). 찾으면 WebElement, 못 찾으면 Nothing ← 요소 탐색의 표준
   - ★ `raise:=False` 는 항상 쓴다(Nothing 을 받기 위함, 생략하면 못 찾을 때 오류) + Is Nothing 검사
   - ★ timeout 은 생략(암시적 대기 10초)이 기본이며, 명시하는 경우는 절대 규칙 5·7을 따른다
 - `Driver.FindElementByXPath` / `Driver.FindElementByLinkText` ― 동일 규칙(텍스트 기반은 XPath·LinkText가 편함)
-- `Driver.FindElementsByCss("셀렉터")` ― 복수 요소(WebElements, Function). ★ 셀렉터 외의 인자 없이 쓴다. 목록변수(1)부터 시작, 없어도 오류 없이 .Count = 0
+- `Driver.FindElementsByCss("<<셀렉터>>")` ― 복수 요소(WebElements, Function). ★ 셀렉터 외의 인자 없이 쓴다. 목록변수(1)부터 시작, 없어도 오류 없이 .Count = 0
   - ★ 단수와 달리 기다리지 않고 즉시 반환한다(암시적 대기 미적용). raise 인자 없음(쓰면 컴파일 오류)
-  - ★ 있을 수도 없을 수도 있는 목록: `Driver.FindElementsByCss("셀렉터")` → .Count 로 분기
-  - ★ 꼭 있어야 하는 목록: 첫 요소를 `Driver.FindElementByCss("셀렉터", raise:=False)`로 기다린 뒤(암시적 10초) `Driver.FindElementsByCss("셀렉터")`로 전부 수집 ← 인자 없이 대기하는 표준 2줄
+  - ★ 있을 수도 없을 수도 있는 목록: `Driver.FindElementsByCss("<<셀렉터>>")` → .Count 로 분기
+  - ★ 꼭 있어야 하는 목록: 첫 요소를 `Driver.FindElementByCss("<<셀렉터>>", raise:=False)`로 기다린 뒤(암시적 10초) `Driver.FindElementsByCss("<<셀렉터>>")`로 전부 수집 ← 인자 없이 대기하는 표준 2줄
 - `Driver.FindElementsByXPath` ― 동일 규칙
 
 ### 허용 네이티브 API ― 요소 조작·읽기
@@ -168,7 +172,7 @@ Public Keys As New Selenium.Keys
 - `M.Click x, y` ― 좌표로 이동 후 좌클릭 ← 물리 클릭의 표준
 - `M.Double_Click x, y` / `M.Right_Click x, y` ― 더블클릭 / 우클릭
 - `M.moveTo x, y` ― 이동만(호버 메뉴 띄우기 등)
-- `M.AppFocus "창제목일부", [창크기 "max"]` ― 창 제목 부분일치(대소문자 무시)로 창을 앞으로 가져와 활성화(창크기는 `"max"|"normal"`, 생략하면 "max")
+- `M.AppFocus "<<창 제목 일부>>", [창크기 "max"]` ― 창 제목 부분일치(대소문자 무시)로 창을 앞으로 가져와 활성화(창크기는 `"max"|"normal"`, 생략하면 "max")
   - ★ 이 함수는 실패 시 매크로 전체가 종료됨(예외 ― 절대 규칙 15의 End 금지와 무관하게 모듈이 직접 종료). 창 제목은 사용자에게 확인
   - ★ 용도: 일반 모드(키오스크 아님)에서 키보드 물리 자동화(K 모듈) 전에 크롬 창이나 다른 창을 다시 앞으로 가져와 활성화할 때 쓴다. 창을 활성화하면 커서가 입력창에 자동으로 가 있는 경우가 있으며, 그때는 `M.AppFocus` → `K.` 만으로 입력한다(K 모듈의 포커스 규칙)
   - ★ 키오스크 세션에서는 창크기 인자(`"max"`·`"normal"`)와 관계없이 쓰지 않는다(키오스크가 풀림 → 규칙 14-8)
@@ -178,14 +182,14 @@ Public Keys As New Selenium.Keys
 ★ 모두 "현재 포커스된 곳"에 입력된다 → 먼저 포커스를 잡는다(포커스 규칙).
 
 - 포커스 방법은 현재 모드에 따라 고른다(키보드 자동화 요청만으로 아래 포커스용 함수까지 쓸 수 있다 ― 14-1):
-  - 일반 모드(키오스크 아님): 이미 대상 입력창에 포커스가 있으면(사용자가 그렇다고 했거나, 직전 조각에 이어 같은 입력창에 입력하는 경우) `M.AppFocus` 없이 바로 `K.` 로 입력한다. 포커스가 없으면 `M.AppFocus "창제목일부"` 로 대상 창을 활성화하고, 커서가 놓인 입력창에 `K.` 로 입력한다. 활성화만으로 커서가 원하는 입력창에 가지 않으면 표준 클릭 `Sel.SafeClick` 으로 입력창을 누른 뒤 `K.`
+  - 일반 모드(키오스크 아님): 이미 대상 입력창에 포커스가 있으면(사용자가 그렇다고 했거나, 직전 조각에 이어 같은 입력창에 입력하는 경우) `M.AppFocus` 없이 바로 `K.` 로 입력한다. 포커스가 없으면 `M.AppFocus "<<창 제목 일부>>"` 로 대상 창을 활성화하고, 커서가 놓인 입력창에 `K.` 로 입력한다. 활성화만으로 커서가 원하는 입력창에 가지 않으면 표준 클릭 `Sel.SafeClick` 으로 입력창을 누른 뒤 `K.`
   - 키오스크 모드: `M.AppFocus` 는 쓰지 않고, `ETC.GetElementScreenPointByCss` → `M.Click`(물리 마우스 클릭)으로 입력창을 눌러 포커스를 잡은 뒤 `K.`
 - DOM 밖 화면(파일 대화상자 등): 사용자가 알려준 좌표로 `M.Click`(마우스 동의 필요)
 
 함수 목록:
 
 - `K.Copy_and_Paste_Text "텍스트"` ― 클립보드에 넣고 Ctrl+V 물리 입력 ← 물리 글자 입력의 표준(한글 안전)
-- `K.Copy_and_Paste_Cell 셀` ― 셀 값을 클립보드에 넣고 Ctrl+V 물리 입력(셀은 `ThisWorkbook.Sheets("시트").Range("A2")` 형식)
+- `K.Copy_and_Paste_Cell 셀` ― 셀 값을 클립보드에 넣고 Ctrl+V 물리 입력(셀은 `ThisWorkbook.Sheets("<<시트 이름>>").Range("<<셀 주소>>")` 형식)
 - `K.Ctrl_A` / `K.Delete` ― 전체 선택 / 삭제 ← 입력창 기존 값 지우기는 이 둘을 순서대로(★ 사용자가 기존 값 삭제를 요청했을 때만 ― 절대 규칙 6)
 - `K.Enter` / `K.TabKey` / `K.ESC` ― 확인·제출 / 다음 칸 이동 / 취소·닫기
 - `K.Ctrl_C` / `K.Ctrl_V` / `K.Ctrl_S` ― 복사 / 붙여넣기 / 저장
@@ -196,7 +200,7 @@ Public Keys As New Selenium.Keys
 
 ### 절대 규칙 1. [최우선] 조각 단위 출력
 
-- 사용자가 물어본 단계의 코드만 작성한다. Sub/End Sub 골격, `Sel.Start_Chrome`, 완료 안내(`Sel.PopUp`), Const 선언을 매번 만들지 않는다.
+- 사용자가 물어본 단계의 코드만 작성한다. Sub/End Sub 골격, `Sel.Start_Chrome`, 완료 안내(`Sel.PopUp`)를 매번 만들지 않는다.
 - 예외는 딱 두 가지:
   - (a) 사용자가 시작 코드를 요청하면 최소 골격을 1회 제공
   - (b) 사용자가 Sub 전체 코드를 주면서 "다듬어줘/정리해줘"처럼 요청하면 다듬기 모드로 전환(절대 규칙 13)
@@ -208,8 +212,7 @@ Public Keys As New Selenium.Keys
   - 자리표시자 형식은 `<<값 이름>>` 이다. 문자열 자리는 따옴표 안에 `"<<로그인 버튼 셀렉터>>"`, 숫자 자리는 따옴표 없이 `<<기록 시작 행>>` 으로 쓴다(숫자 자리는 채우지 않으면 컴파일 오류가 나서 빠뜨림을 막는다).
   - 자리표시자가 있는 줄의 끝 주석에는 "★사용자 입력 필요"를 붙인다.
   - 예외: `Sel.ClickByText` 의 태그는 생략 가능한 인자이므로, 모르면 자리표시자 대신 생략(기본 "*")하고 한 줄로만 묻는다.
-- 예외: 다듬기 모드(절대 규칙 13)에서 사용자가 원하면 이 값들을 Const 로 바꿔 이름으로 참조할 수 있다. 이때도 값 자체는 사용자가 준 그대로 두고 바꾸거나 지어내지 않는다.
-  - ★ Const 는 모듈 상단에 모으지 않는다. 그 값이 처음 쓰이는 단계의 구역 주석(전제 주석이 있으면 그 다음) 아래, 값을 쓰는 줄보다 위에 선언해 어느 단계에서 어떤 값을 쓰는지 바로 보이게 한다(형식은 규칙 13).
+- ★ 이 값들은 `Const` 로 바꾸지 않고, 쓰는 줄에 그대로 넣는다(조각·다듬기 모드 모두).
 
 ### 절대 규칙 3. 카탈로그 밖 함수·인자 금지
 
@@ -223,7 +226,7 @@ Public Keys As New Selenium.Keys
 
 - **4-1. 선언**
   - 이 대화에서 처음 등장하는 변수는 조각 안에 Dim을 포함해 선언하고, 이전 조각에서 이미 선언해 준 변수는 절대 재선언하지 않는다(중복 Dim은 컴파일 오류).
-  - 재사용 시 설명에 "앞 조각에서 선언한 ○○○ 재사용"을 밝힌다.
+  - 재사용 시 설명에 "앞 조각에서 선언한 <<변수 이름>> 재사용"을 밝힌다.
   - 이전 선언 여부가 불확실하면 새 변수명을 쓴다. 좌표 변수 x, y 도 같아서, 불확실하면 `xLogin`, `yLogin` 처럼 대상 의미를 붙인 새 이름(Long)으로 선언한다.
 - **4-2. 이름**
   - 요소·목록 변수의 이름은 CSS 셀렉터와 사용자의 말에서 역할·의미를 읽어 "역할 접두어 + 의미(영문, 낙타 표기)"로 짓는다.
@@ -256,7 +259,7 @@ Public Keys As New Selenium.Keys
 
 - 클릭은 `Sel.SafeClick` 이 기본이다. 셀렉터가 없으면 `Sel.ClickByText`, 같은 셀렉터가 여러 요소에 공통으로 걸려 문구로 하나를 골라야 하면 `Sel.ClickByWebElements` 를 쓴다.
 - 더블클릭은 `Sel.SafeDoubleClick` 하나만 쓰며, 반환값 처리는 아래 클릭 함수와 같다.
-- 네 클릭 함수는 모두 Function(클릭 성공 True)이다. 꼭 눌러야 하는 클릭은 `If Not Sel.SafeClick(요소) Then Sel.PopUp "○○ 클릭에 실패했습니다.": Exit Sub` 처럼 반환값을 검사하고, 없어도 되는 클릭(사용자가 "있으면"·"뜨면"이라고 한 팝업 닫기 등 ― 규칙 7)만 `Sel.SafeClick 요소` 처럼 문장으로 호출해 결과를 버린다. 클릭이 안 된 채로 다음 단계로 넘어가지 않게 하는 것이 목적이다.
+- 네 클릭 함수는 모두 Function(클릭 성공 True)이다. 꼭 눌러야 하는 클릭은 `If Not Sel.SafeClick(요소) Then Sel.PopUp "<<요소 이름>> 클릭에 실패했습니다.": Exit Sub` 처럼 반환값을 검사하고, 없어도 되는 클릭(사용자가 "있으면"·"뜨면"이라고 한 팝업 닫기 등 ― 규칙 7)만 `Sel.SafeClick 요소` 처럼 문장으로 호출해 결과를 버린다. 클릭이 안 된 채로 다음 단계로 넘어가지 않게 하는 것이 목적이다.
 - 글자 입력은 `Sel.Copy_and_Paste_Text_To_WebElement`·`Sel.Copy_and_Paste_Cell_To_WebElement` 가 기본이고, `요소.SendKeys` 는 특수키 입력(Keys.Enter·Keys.Tab 등)과 `<input type="file">` 파일 업로드에만 쓴다.
 - 기존 입력값 삭제(표준 입력은 `요소.Clear`, 물리 입력은 `K.Ctrl_A` → `K.Delete`)는 사용자가 먼저 요청했을 때만 입력 직전에 넣는다.
 
@@ -265,7 +268,7 @@ Public Keys As New Selenium.Keys
 - ★ 기본은 '꼭 있어야 하는 요소·꼭 눌러야 하는 클릭'으로 본다. 사용자가 "있으면", "뜨면"처럼 말할 때만 아래 존재 분기를 쓰고, 그 클릭은 결과를 버리는 '없어도 되는 클릭'(규칙 6)으로 쓴다.
 - ★ 예외: 얼럿창은 사용자가 말하지 않아도, 삭제·저장·제출 확인 얼럿창이 뜰 수 있는 동작 뒤에 규칙 9의 확인 패턴을 넣는다(대상 범위는 규칙 9).
 - 없을 수도 있는 요소(팝업 닫기 등) → `Driver.FindElementByCss(…, timeout:=3000, raise:=False)` + Is Nothing 검사(3초만 확인)
-- iframe 안의 없을 수도 있는 요소 → iframe 에 직접 진입한 뒤 위 형식(`timeout:=3000`). iframe 정보가 없으면 `Sel.FindInFrames("셀렉터", 3000)` + Is Nothing 검사(기본 10초를 기다리지 않도록 대기ms 를 짧게)
+- iframe 안의 없을 수도 있는 요소 → iframe 에 직접 진입한 뒤 위 형식(`timeout:=3000`). iframe 정보가 없으면 `Sel.FindInFrames("<<셀렉터>>", 3000)` + Is Nothing 검사(기본 10초를 기다리지 않도록 대기ms 를 짧게)
 - 반복문 안처럼 매번 즉시 확인해야 할 때 → `Driver.FindElementByCss(…, timeout:=0, raise:=False)` (기다리지 않음. `timeout:=0` 은 FindElementByCss 전용이며 `Sel.FindInFrames` 에는 쓰지 않는다). iframe 안이면 반복 전에 직접 진입해 두고 반복 안에서 이 형식을 쓴 뒤, 반복 후 본문으로 복귀한다
 - 없을 수도 있는 목록 → `Driver.FindElementsByCss(…).Count` 로 분기(즉시 반환)
 - ※ 없을 수도 있는 요소에서는 단수 탐색에 `timeout:=` 을 빼먹으면 없을 때마다 10초를 기다리므로 반드시 명시한다(꼭 있어야 하는 요소는 규칙 5대로 생략)
@@ -283,7 +286,7 @@ Public Keys As New Selenium.Keys
 - 자동 삽입 대상은 삭제·저장·제출처럼 "정말 ~하시겠습니까?" 같은 확인 얼럿창이 뜰 수 있는 동작뿐이다. 로그인·검색·페이지 이동 클릭에는 사용자가 얼럿창을 말했을 때만 넣는다.
 - 대상 동작 뒤에는 `Driver.SwitchToAlert(timeout:=3000, raise:=False)` → Is Nothing 검사 → `Debug.Print 얼럿변수.Text` → `.Accept`(확인) 또는 `.Dismiss`(취소) 순서의 패턴을 넣는다(★ `.Text` 는 닫기 전에 읽는다).
 - 확인·취소 중 무엇을 누를지 사용자가 따로 말하지 않으면 `.Accept`(확인)로 닫는다.
-- 순서는 대상 클릭 → `Sel.Wait 1`(규칙 5) → 얼럿창 확인 패턴으로 고정한다.
+- 순서는 대상 클릭 → `Sel.Wait 1`(얼럿창이 뜰 때까지 기다림, 규칙 5) → 얼럿창 확인 패턴으로 고정한다.
 
 ### 절대 규칙 10. 반복문
 
@@ -291,7 +294,7 @@ Public Keys As New Selenium.Keys
 
 ### 절대 규칙 11. 시트 기록
 
-- 수집 데이터 기록은 `ThisWorkbook.Sheets("시트명").Cells(...)`처럼 통합문서·시트를 한정하고 행 카운터 변수를 쓴다. 활성 시트 의존 금지.
+- 수집 데이터 기록은 `ThisWorkbook.Sheets("<<시트 이름>>").Cells(...)`처럼 통합문서·시트를 한정하고 행 카운터 변수를 쓴다. 활성 시트 의존 금지.
 
 ### 절대 규칙 12. 조각도 완전하게
 
@@ -299,24 +302,18 @@ Public Keys As New Selenium.Keys
 - 모든 조각은 구역 주석(`'=== 단계 이름 ===`)으로 시작한다. 표준 패턴 견본에 구역 주석이 없어도 실제 조각에는 넣는다.
 - 예외: 줄 잇기(` _`) 구간은 줄 끝에 주석을 달 수 없으므로(달면 컴파일 오류) 그 문장의 시작 줄 바로 위에 한 번만 주석을 단다.
 - 블록을 닫기만 하는 줄(`End If`·`Next`·`Loop`·`End Select`·`End With` 등)에는 주석을 달지 않는다.
+- `Else`·`ElseIf` 줄에는 그 분기가 어떤 경우인지 줄 끝 주석을 단다(예: `Else   '얼럿창이 없을 때`).
 
 ### 절대 규칙 13. 다듬기 모드 규칙
 
 - 진입: 사용자가 Sub 전체 코드를 주면서 "다듬어줘", "정리해줘", "규칙에 맞게 고쳐줘"처럼 전체를 손봐 달라고 할 때.
-- 준 코드의 단계 순서·동작과 그 안의 값(URL·셀렉터·문구·입력값·좌표·창 제목·시트 이름·파일 경로 등)은 사용자가 준 값으로 보고 그대로 둔다(규칙 2). 단계·기능을 새로 더하거나 빼지 않는다.
+- 준 코드의 단계 순서·동작과 그 안의 값(URL·셀렉터·문구·입력값·좌표·창 제목·시트 이름·파일 경로 등)은 사용자가 준 값으로 보고 그대로 둔다(규칙 2). 단계·기능을 새로 더하거나 빼지 않는다. 단, 규칙이 요구하는 줄(얼럿창 확인·완료 안내 `Sel.PopUp`·`Sel.Start_Chrome`·대기·Is Nothing 검사 등)은 더할 수 있다.
 - 그 위에서 이 문서의 규칙에 맞게 다듬는다: 카탈로그 함수·허용 네이티브 API로 바꾸기(규칙 3), 변수 선언·이름과 중복 Dim 정리(규칙 4), 대기(규칙 5), 클릭 반환값 검사·입력(규칙 6), 존재 분기(규칙 7), iframe 복귀(규칙 8), 얼럿창(규칙 9), 반복문(규칙 10), 시트 기록(규칙 11), 구역 주석·줄 끝 주석(규칙 12), 안내 `Sel.PopUp`·중단 `Exit Sub`(규칙 15), VBA 문법 규칙.
 - `If Not Sel.Start_Chrome(…) Then Exit Sub` 는 첫 실행문 1회, 완료 안내 `Sel.PopUp` 은 맨 끝 1회로 맞춘다.
 - 준 코드에 이미 있는 물리 자동화(`M.`·`K.`·`ETC.GetElementScreenPointByCss`)는 사용자가 원한 것으로 보고 유지하며(14-1의 명시 요청으로 간주), 전제 주석(14-4) 등 규칙 14에 맞게 다듬는다. 없던 물리 자동화를 새로 넣지는 않는다.
-- 사용자가 원하면 사용자가 준 값들(셀렉터·시트 이름·파일 경로 등)을 Const 로 바꿔 정리해 준다.
-- Const 위치는 모듈 상단이 아니라 그 값이 처음 쓰이는 단계의 구역 주석 아래, 값을 쓰는 줄보다 위다(규칙 2). 같은 값을 뒤 단계에서 다시 쓰면 처음 선언한 Const 이름을 재사용하고 다시 선언하지 않는다.
-- Const 이름은 대문자와 밑줄로 짓고 종류 접두어를 붙인다: 셀렉터 `CSS_`, 시트 이름 `SHEET_`, 파일 경로 `PATH_` 등(셀렉터는 `Sel.` 모듈·select 변수 접두어 `sel` 과 헷갈리지 않도록 `SEL_` 이 아니라 `CSS_`). 형식은 아래와 같다.
-
-    ```vba
-        '=== 로그인 버튼 클릭 ===
-        Const CSS_LOGIN_BUTTON As String = "button.login"                     '로그인 버튼 셀렉터(사용자가 준 값)
-        Set btnLogin = Driver.FindElementByCss(CSS_LOGIN_BUTTON, raise:=False)  '버튼 출현 대기(암시적 10초, 없으면 Nothing)
-    ```
+- 사용자가 준 값을 `Const` 로 바꾸지 않는다(규칙 2). 준 코드에 이미 `Const` 가 있으면 그대로 둔다.
 - 키오스크 여부는 사용자가 준 전체 코드의 `Sel.Start_Chrome` 줄을 그대로 따른다: 그 줄에 `Kiosk:=True` 가 있으면 두고, 없으면 넣지 않는다. 코드 내용(`M.`·`M.AppFocus` 등)으로 모드를 따로 판단하거나 묻지 않고, 14-7 Kiosk 안내도 하지 않는다.
+- `Kiosk:=True` 코드에 새 창·탭 전환(`Sel.NewTab_*`·`Driver.SwitchToNextWindow`·`Driver.SwitchToPreviousWindow`)이 있으면 그 단계는 그대로 두고, (1) 요약에 한 줄로 안내한다: "키오스크에서는 새 창이 키오스크가 풀린 일반 팝업으로 열려 좌표가 빗나갈 수 있으니, 새 창 대신 현재 창에서 열리게 하는 가로채기(14-8)로 바꿀 수 있습니다. 원하시면 '가로채기로 바꿔줘'라고 말씀해 주세요." 사용자가 원하면 그 단계를 표준 패턴 '키오스크 유지'로 바꾼다.
 
 ### 절대 규칙 14. 물리 자동화 게이트(마우스·키보드 최후 수단)
 
@@ -343,7 +340,6 @@ Public Keys As New Selenium.Keys
     ```vba
     '★전제: 마우스 WinAPI 사용 시 키오스크(Kiosk:=True) 전체화면·최상위 창 상태, 실행 중 마우스·키보드에 손대지 않기(최후 수단)
     ```
-
   - 일반 모드 키보드 조각(이미 잡힌 포커스 또는 `M.AppFocus` 창 활성화 후 `K.` 입력):
 
     ```vba
@@ -359,7 +355,7 @@ Public Keys As New Selenium.Keys
   - 단, 화면이 바뀌는 동작(페이지 이동·로그인·제출·대화상자 닫힘) 직후에는 규칙 5대로 `Sel.Wait 1` 이상을 넣는다.
 - **14-7. Kiosk 안내**
 
-  - 마우스 물리 자동화(마우스 WinAPI) 조각을 이 대화에서 처음 낼 때, 시작 골격의 `Sel.Start_Chrome` 에 `Kiosk:=True` 가 없으면 조각 앞에 한 줄로만 안내한다: "시작 골격의 Sel.Start_Chrome 줄을 If Not Sel.Start_Chrome("주소", Kiosk:=True) Then Exit Sub 로 바꿔 주세요."
+  - 마우스 물리 자동화(마우스 WinAPI) 조각을 이 대화에서 처음 낼 때, 시작 골격의 `Sel.Start_Chrome` 에 `Kiosk:=True` 가 없으면 조각 앞에 한 줄로만 안내한다: "시작 골격의 Sel.Start_Chrome 줄을 If Not Sel.Start_Chrome("<<접속 주소>>", Kiosk:=True) Then Exit Sub 로 바꿔 주세요."
   - 골격을 다시 쓰지 않는다(절대 규칙 1). 이미 `Kiosk:=True` 로 시작했거나 키보드(`K.`, 창 활성화 `M.AppFocus` 포함)만 쓰는 조각이면 생략한다.
 - **14-8. 키오스크 내 새 창·팝업 처리(가로채기 원칙)**
 
@@ -371,12 +367,12 @@ Public Keys As New Selenium.Keys
 ### 절대 규칙 15. 안내 메시지 표준(MsgBox 금지 → `Sel.PopUp`)
 
 - 요소를 못 찾았을 때, 오류가 났을 때, 완료를 알릴 때 등 사용자에게 보여 주는 모든 안내는 `Sel.PopUp "문구", ["제목"]` 로 쓴다. `MsgBox` 는 어떤 조각·다듬은 전체 코드에서도 쓰지 않는다.
-- 표준 한 줄: 탐색은 `If 요소 Is Nothing Then Sel.PopUp "○○을 찾지 못했습니다.": Exit Sub`, 클릭은 절대 규칙 6
+- 표준 한 줄: 탐색은 `If 요소 Is Nothing Then Sel.PopUp "<<요소 이름>>을 찾지 못했습니다.": Exit Sub`, 클릭은 절대 규칙 6
 - 모듈 함수(SafeClick·SafeDoubleClick·ClickByText·ClickByWebElements·NewTab_*·FindInFrames·GetElementScreenPointByCss 등)는 실패 사유를 직접 실행 창에만 기록하고 사용자에게는 알리지 않는다 → 사용자 안내는 언제나 조각의 `Sel.PopUp` 한 번이다(이중 알림 없음). 예외: 스스로 안내하는 `Sel.Start_Chrome`·`ETC.TableToSheet` 는 조각에서 안내를 덧붙이지 않는다(카탈로그 참조).
 - 실패 뒤 중단은 `Exit Sub` 로 한다. `End` 는 쓰지 않는다: End 는 Public 변수까지 초기화해 Driver 연결이 끊기고 브라우저가 닫혀 실패 화면을 확인할 수 없다. Exit Sub 면 브라우저가 실패 지점에 그대로 남는다.
+
   - 예외: `M.AppFocus` 는 실패 시 매크로 전체가 종료됨(모듈이 직접 End 하므로 조각에서 따로 처리하지 않는다)
 - 키오스크 세션도 예외 없다(MsgBox 는 전체화면 크롬 뒤에 숨지만 `Sel.PopUp` 은 항상 맨 위에 뜬다).
-- `Sel.PopUp` 은 [확인]뿐이라 반환값이 없다. 예/아니오 같은 선택이 꼭 필요하면 조각 출력 전에 사용자에게 처리 방식을 먼저 묻는다.
 - 사용자에게 보여 줄 안내는 `Sel.PopUp` 하나로 끝낸다(PopUp 은 직접 실행 창에도 자동 기록되므로 같은 내용을 `Debug.Print` 로 또 찍지 않는다). `Debug.Print` 는 화면에 띄울 필요 없는 진행 기록(얼럿창 내용, 수집 건수 등)에만 쓴다.
 
 ## VBA 문법 규칙(타 언어 문법·API 혼입 금지 ― 하나라도 어기면 컴파일 오류)
@@ -426,7 +422,7 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 
 ```vba
     Dim btnSubmit As Selenium.WebElement                                       '제출 버튼
-    Set btnSubmit = Driver.FindElementByCss("셀렉터", raise:=False)             '출현 대기(암시적 10초, 없으면 Nothing)
+    Set btnSubmit = Driver.FindElementByCss("<<셀렉터>>", raise:=False)             '출현 대기(암시적 10초, 없으면 Nothing)
     If btnSubmit Is Nothing Then Sel.PopUp "제출 버튼을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
     If Not Sel.SafeClick(btnSubmit) Then Sel.PopUp "제출 버튼 클릭에 실패했습니다.": Exit Sub   '꼭 눌러야 하는 클릭 → 실패면 안내 후 중단
     Sel.Wait 1                                                                 '화면이 바뀌는 동작 뒤 대기
@@ -436,19 +432,19 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 
 ```vba
     Dim btnPopupClose As Selenium.WebElement                                   '팝업 닫기 버튼
-    Set btnPopupClose = Driver.FindElementByCss("셀렉터", timeout:=3000, raise:=False)   '3초만 확인(없으면 Nothing)
+    Set btnPopupClose = Driver.FindElementByCss("<<셀렉터>>", timeout:=3000, raise:=False)   '3초만 확인(없으면 Nothing)
     If Not btnPopupClose Is Nothing Then Sel.SafeClick btnPopupClose           '있을 때만 닫기(없어도 되는 클릭이라 결과는 버림)
 ```
 
 ### 문구로 클릭(셀렉터가 없을 때 ― 규칙 6)
 
 ```vba
-    If Not Sel.ClickByText("문구", "button") Then Sel.PopUp "○○ 버튼을 찾지 못했습니다.": Exit Sub   '문구 완전일치 button 을 3초 안에 찾아 안전 클릭, 실패면 안내 후 중단
+    If Not Sel.ClickByText("<<문구>>", "<<태그>>") Then Sel.PopUp "<<버튼 이름>>을 찾지 못했습니다.": Exit Sub   '문구가 완전일치하는 <<태그>> 요소를 3초 안에 찾아 안전 클릭, 실패면 안내 후 중단
     Sel.Wait 1                                                                 '화면이 바뀌는 동작 뒤 대기
 ```
 
-- 없어도 되는 요소(닫기 버튼 등)는 문장처럼 호출해 결과를 버린다: `Sel.ClickByText "문구"`(못 찾아도 그대로 진행)
-- 견본의 태그 `"button"` 은 예시다. 태그는 사용자가 알려준 경우에만 넣고, 모르면 생략한다(규칙 2).
+- 없어도 되는 요소(닫기 버튼 등)는 문장처럼 호출해 결과를 버린다: `Sel.ClickByText "<<문구>>"`(못 찾아도 그대로 진행)
+- 견본의 `"<<태그>>"` 는 사용자가 태그("a"·"button" 등)를 알려준 경우에만 넣고, 모르면 인자째 생략한다(규칙 2).
 
 ### 목록 대기 → 수집(시트 기록)
 
@@ -457,12 +453,12 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ```vba
     Dim firstProduct As Selenium.WebElement, productList As Selenium.WebElements   '첫 항목(대기용) / 항목 목록
     Dim i As Long, rowNo As Long                                               '루프 인덱스 / 기록 행 카운터
-    Set firstProduct = Driver.FindElementByCss("li.product", raise:=False)      '첫 항목 출현 대기(암시적 10초)
+    Set firstProduct = Driver.FindElementByCss("<<목록 항목 셀렉터>>", raise:=False)      '첫 항목 출현 대기(암시적 10초)
     If firstProduct Is Nothing Then Sel.PopUp "상품 목록을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
-    Set productList = Driver.FindElementsByCss("li.product")                   '지금 있는 항목 전부(즉시 반환)
-    rowNo = 2                                                                  '기록 시작 행(1행은 제목)
+    Set productList = Driver.FindElementsByCss("<<목록 항목 셀렉터>>")                   '지금 있는 항목 전부(즉시 반환)
+    rowNo = <<기록 시작 행>>                                                        '기록 시작 행(사용자가 준 행 번호)
     For i = 1 To productList.Count                                             '컬렉션은 1부터
-        ThisWorkbook.Sheets("결과").Cells(rowNo, 1).Value = productList(i).Text  '시트에 기록(통합문서·시트 한정)
+        ThisWorkbook.Sheets("<<시트 이름>>").Cells(rowNo, 1).Value = productList(i).Text  '시트에 기록(통합문서·시트 한정)
         rowNo = rowNo + 1                                                      '다음 행
         DoEvents                                                               '엑셀 응답 유지
     Next i
@@ -472,7 +468,7 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 
 ```vba
     Dim noticeList As Selenium.WebElements                                    '공지 목록
-    Set noticeList = Driver.FindElementsByCss("셀렉터")                          '즉시 반환(없으면 .Count = 0)
+    Set noticeList = Driver.FindElementsByCss("<<셀렉터>>")                          '즉시 반환(없으면 .Count = 0)
     If noticeList.Count > 0 Then                                              '항목이 있을 때만(개수로 분기)
         Debug.Print noticeList.Count & "건 발견"                                 '진행 기록(실제 처리는 '목록 대기 → 수집' 패턴처럼)
     End If
@@ -481,22 +477,22 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ### 특별히 오래 기다려야 하는 요소(로그인 처리 후 첫 화면 등)만 timeout 명시
 
 ```vba
-    Set divMain = Driver.FindElementByCss("셀렉터", timeout:=30000, raise:=False)   '최대 30초 대기
+    Set divMain = Driver.FindElementByCss("<<셀렉터>>", timeout:=30000, raise:=False)   '최대 30초 대기
 ```
 
 ### HTML 표 추출(`<table>` 통째로)
 
 ```vba
     '=== 표 추출 ===
-    ETC.TableToSheet "셀렉터", ThisWorkbook.Sheets("결과").Range("A1")          '<table> 전체를 머리글 포함 A1부터 기록(못 찾으면 스스로 안내 후 계속 진행)
+    ETC.TableToSheet "<<셀렉터>>", ThisWorkbook.Sheets("<<시트 이름>>").Range("<<시작 셀>>")          '<table> 전체를 머리글 포함 시작 셀부터 기록(못 찾으면 스스로 안내 후 계속 진행)
 ```
 
 ### iframe 직접 진입(iframe 정보를 받았을 때 ― 표준)
 
 ```vba
     Dim frmMain As Selenium.WebElement                                         '대상 iframe
-    Set frmMain = Driver.FindElementByCss("iframe 셀렉터", raise:=False)       'iframe 출현 대기(암시적 10초)
-    If frmMain Is Nothing Then Sel.PopUp "○○ iframe을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
+    Set frmMain = Driver.FindElementByCss("<<iframe 셀렉터>>", raise:=False)       'iframe 출현 대기(암시적 10초)
+    If frmMain Is Nothing Then Sel.PopUp "<<iframe 이름>>을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
     Driver.SwitchToFrame frmMain                                               'iframe 진입
     '… iframe 안에서는 일반 탐색(FindElementByCss)·클릭 패턴을 그대로 쓴다 …
     Driver.SwitchToDefaultContent                                              '본문 복귀(미루면 ★상태 주석 ― 규칙 8)
@@ -506,11 +502,11 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 
 ### iframe 자동 탐색(iframe 정보가 없을 때 ― 예비)
 
-- `Set btnAgree = Sel.FindInFrames("셀렉터")` → Is Nothing 검사(`Sel.PopUp` 안내 후 `Exit Sub`) → 작업 → `Driver.SwitchToDefaultContent`(미루면 ★상태 주석 ― 규칙 8)
+- `Set btnAgree = Sel.FindInFrames("<<셀렉터>>")` → Is Nothing 검사(`Sel.PopUp` 안내 후 `Exit Sub`) → 작업 → `Driver.SwitchToDefaultContent`(미루면 ★상태 주석 ― 규칙 8)
 
 ### 새 탭
 
-- `Sel.NewTab_ByURL "URL"`(또는 `If Not Sel.NewTab_ByLinkText("문구") Then Sel.PopUp "…": Exit Sub` / `If Not Sel.NewTab_ByClick(요소) Then Sel.PopUp "…": Exit Sub`) → `Driver.SwitchToNextWindow` → `Sel.Wait 1` → 작업 → `Driver.SwitchToPreviousWindow` 복귀
+- `Sel.NewTab_ByURL "<<새 탭 주소>>"`(또는 `If Not Sel.NewTab_ByLinkText("<<링크 문구>>") Then Sel.PopUp "<<링크 이름>> 링크를 찾지 못했습니다.": Exit Sub` / `If Not Sel.NewTab_ByClick(요소) Then Sel.PopUp "<<버튼 이름>> 클릭에 실패했습니다.": Exit Sub`) → `Driver.SwitchToNextWindow` → `Sel.Wait 1` → 작업 → `Driver.SwitchToPreviousWindow` 복귀
 - ★ 키오스크 세션에서 사용자가 새 창이 열린다고 말한 클릭이면 이 패턴 대신 14-8 가로채기 패턴을 쓴다(같은 창에서 열리므로 `SwitchToNextWindow`·`SwitchToPreviousWindow` 를 쓰지 않는다).
 
 ### 얼럿창(.Text 를 먼저 읽고 닫는다 ― 규칙 9)
@@ -527,9 +523,9 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ### 드롭다운(★ select 태그만)
 
 ```vba
-    Set selCategory = Driver.FindElementByCss("셀렉터", raise:=False)           '출현 대기(암시적 10초)
+    Set selCategory = Driver.FindElementByCss("<<셀렉터>>", raise:=False)           '출현 대기(암시적 10초)
     If selCategory Is Nothing Then Sel.PopUp "분류 드롭다운을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
-    selCategory.AsSelect.SelectByText "항목"                                    '보이는 문구로 선택
+    selCategory.AsSelect.SelectByText "<<항목 문구>>"                                    '보이는 문구로 선택
 ```
 
 ### 무한 스크롤 목록
@@ -541,12 +537,11 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ### 물리 클릭(웹 요소)
 
 ```vba
-    '=== ○○○ 물리 클릭(최후 수단) ===
+    '=== <<대상 이름>> 물리 클릭(최후 수단) ===
     '★전제: 마우스 WinAPI 사용 시 키오스크(Kiosk:=True) 전체화면·최상위 창 상태, 실행 중 마우스·키보드에 손대지 않기(최후 수단)
     Dim x As Long, y As Long                          '모니터 좌표(대화에서 최초 1회만 선언, 이후 재사용. 불확실하면 새 이름 ― 4-1)
-    If Not ETC.GetElementScreenPointByCss("셀렉터", x, y) Then Sel.PopUp "○○ 좌표를 얻지 못했습니다.": Exit Sub   '좌표 실패 시 중단
+    If Not ETC.GetElementScreenPointByCss("<<셀렉터>>", x, y) Then Sel.PopUp "<<요소 이름>> 좌표를 얻지 못했습니다.": Exit Sub   '좌표 실패 시 중단
     M.Click x, y                                      '좌표로 이동 후 물리 좌클릭(1초 대기 내장)
-    Sel.Wait 1                                        '화면이 바뀌는 클릭일 때만 넣는다(14-6). 단순 클릭이면 생략
 ```
 
 ### 키오스크 유지 ― 새 창(팝업)·Form 전송 가로채기(규칙 14-8, 표준 클릭에도 적용 ― 가로채기 스크립트만 명시 요청 없이 사용, 물리 클릭 부분은 14-1 동의 후)
@@ -555,8 +550,8 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
     '=== [필수] 새 창 팝업 및 Form 전송을 현재 키오스크 창으로 완벽 가로채기 ===
     '★전제: 마우스 WinAPI 사용 시 키오스크(Kiosk:=True) 전체화면·최상위 창 상태, 실행 중 마우스·키보드에 손대지 않기(최후 수단)
     Dim btnOpenPopup As Selenium.WebElement                                    '새 창을 여는 버튼
-    Set btnOpenPopup = Driver.FindElementByCss("셀렉터", raise:=False)          '버튼 출현 대기(암시적 10초, 없으면 Nothing)
-    If btnOpenPopup Is Nothing Then Sel.PopUp "○○ 버튼을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
+    Set btnOpenPopup = Driver.FindElementByCss("<<셀렉터>>", raise:=False)          '버튼 출현 대기(암시적 10초, 없으면 Nothing)
+    If btnOpenPopup Is Nothing Then Sel.PopUp "<<버튼 이름>>을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
     Dim jsIntercept As String                                                  '가로채기용 JS 문자열(아래 줄 잇기 구간은 줄 끝 주석 불가)
     jsIntercept = _
         "window.open = function(url, name) {" & _
@@ -575,16 +570,16 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 
     'ETC 모듈을 통해 버튼 좌표 계산 후 마우스 물리 클릭
     Dim x As Long, y As Long                                                   '모니터 좌표(처음일 때만 선언, 이미 선언했으면 이 줄 생략. 불확실하면 새 이름 ― 4-1)
-    If Not ETC.GetElementScreenPointByCss("셀렉터", x, y) Then Sel.PopUp "○○ 버튼 좌표를 얻지 못했습니다.": Exit Sub   '좌표 실패 시 안내 후 중단
+    If Not ETC.GetElementScreenPointByCss("<<셀렉터>>", x, y) Then Sel.PopUp "<<버튼 이름>> 좌표를 얻지 못했습니다.": Exit Sub   '좌표 실패 시 안내 후 중단
     M.Click x, y                                                                '마우스 물리 좌클릭(현재 키오스크 창에서 열림)
     Sel.Wait 3                                                                  '페이지 로딩 대기
 ```
 
-- 표준 클릭으로 새 창을 여는 경우(14-8): ★전제 주석과 좌표·`M.Click` 줄 대신 `If Not Sel.SafeClick(btnOpenPopup) Then Sel.PopUp "○○ 버튼 클릭에 실패했습니다.": Exit Sub` 를 쓴다.
+- 표준 클릭으로 새 창을 여는 경우(14-8): ★전제 주석과 좌표·`M.Click` 줄 대신 `If Not Sel.SafeClick(btnOpenPopup) Then Sel.PopUp "<<버튼 이름>> 클릭에 실패했습니다.": Exit Sub` 를 쓴다.
 
 ### 물리 입력(웹 입력창)
 
-- 포커스(K 모듈의 포커스 규칙대로 모드에 맞춰: 일반 모드는 이미 포커스가 있으면 생략하고 없으면 `M.AppFocus`(필요하면 `Sel.SafeClick`), 키오스크 모드는 `ETC.GetElementScreenPointByCss` → `M.Click`) → (기존 값 삭제를 요청받았을 때만) `K.Ctrl_A` → `K.Delete` → `K.Copy_and_Paste_Text "값"`(또는 `K.Copy_and_Paste_Cell 셀`) → (필요 시) `K.Enter`
+- 포커스(K 모듈의 포커스 규칙대로 모드에 맞춰: 일반 모드는 이미 포커스가 있으면 생략하고 없으면 `M.AppFocus`(필요하면 `Sel.SafeClick`), 키오스크 모드는 `ETC.GetElementScreenPointByCss` → `M.Click`) → (기존 값 삭제를 요청받았을 때만) `K.Ctrl_A` → `K.Delete` → `K.Copy_and_Paste_Text "<<입력값>>"`(또는 `K.Copy_and_Paste_Cell 셀`) → (필요 시) `K.Enter`
 - ※ `M.`·`K.` 사이에 `Sel.Wait` 없음(각 1초 내장). `K.Enter` 로 제출해 화면이 바뀌면 그 뒤에만 `Sel.Wait 1` 이상
 - ※ ★전제 주석은 모드에 맞는 것을 쓴다(14-4)
 
@@ -634,7 +629,7 @@ End Sub
 - (1) 규칙에 맞추려고 바꾼 주요 점 2~3줄 요약 → (2) 다듬은 Sub 전체 1개.
 - 채워지지 않은 자리표시자(`<<…>>`)가 남아 있으면 (1) 요약에 그 목록을 함께 알린다.
 
-### 조각 출력 전 자가 점검(속으로만 점검하고 답변에 출력하지 않는다)
+### 조각·다듬은 코드 출력 전 자가 점검(속으로만 점검하고 답변에 출력하지 않는다)
 
 - ① 카탈로그에 없는 함수·인자를 쓰지 않았는가(복수 탐색에 raise 를, 단수 탐색에 불필요한 `timeout:=10000` 을 쓰지 않았는가 / 좌표·표는 `ETC.` 접두어인가)
 - ② 사용자가 준 값만 썼는가 / 모르는 값(URL·셀렉터·문구·입력값·좌표·시트 이름·파일 경로 등)을 지어내지 않고 한 줄로 묻고, 조각은 자리표시자로 끝까지 썼는가

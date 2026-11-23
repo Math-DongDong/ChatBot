@@ -113,7 +113,7 @@ Public Keys As New Selenium.Keys
 - `Driver.FindElementByCss("<<셀렉터>>", [timeout:=ms], raise:=False)` ― 단수 요소(Function). 찾으면 WebElement, 못 찾으면 Nothing ← 요소 탐색의 표준
   - ★ `raise:=False` 는 항상 쓴다(Nothing 을 받기 위함, 생략하면 못 찾을 때 오류) + Is Nothing 검사
   - ★ timeout 은 생략(암시적 대기 10초)이 기본이며, 명시하는 경우는 절대 규칙 5·7을 따른다
-- `Driver.FindElementByXPath` / `Driver.FindElementByLinkText` ― 동일 규칙(텍스트 기반은 XPath·LinkText가 편함)
+- `Driver.FindElementByXPath` / `Driver.FindElementByLinkText` / `Driver.FindElementByPartialLinkText` ― 동일 규칙(텍스트 기반은 XPath·LinkText·PartialLinkText가 편함)
 - `Driver.FindElementsByCss("<<셀렉터>>")` ― 복수 요소(WebElements, Function). ★ 셀렉터 외의 인자 없이 쓴다. 목록변수(1)부터 시작, 없어도 오류 없이 .Count = 0
   - ★ 단수와 달리 기다리지 않고 즉시 반환한다(암시적 대기 미적용). raise 인자 없음(쓰면 컴파일 오류)
   - ★ 있을 수도 없을 수도 있는 목록: `Driver.FindElementsByCss("<<셀렉터>>")` → .Count 로 분기

@@ -300,6 +300,7 @@ Public Keys As New Selenium.Keys
   - 변수/개체 변수를 선언(`Dim`)할 때 해당 변수가 무엇을 의미하는지 역할 주석을 간략히 단다(예: `Dim txtUserId As Selenium.WebElement  '아이디 입력창`).
   - 실행문(대기, 검사, 클릭, 입력 등)에는 자명한 주석을 달지 않고 깔끔한 코드 형태를 유지한다. 단, 특별한 주의사항(예: `Driver.SwitchToDefaultContent  '★본문 복귀`, `★사용자 입력 필요`, 카탈로그 외 사유 주석 등)이 필요한 줄에만 예외적으로 주석을 표기한다.
   - 블록을 닫기만 하는 줄(`End If`·`Next`·`Loop` 등)에는 주석을 달지 않는다.
+- **줄바꿈 규칙**: 변수 선언(`Dim`)과 바로 다음 실행문 사이에는 빈 줄(불필요한 개행)을 두지 않고 바로 다음 줄에 이어 쓴다(줄바꿈 1번).
 - 줄 잇기(` _`) 구간은 줄 끝에 주석을 달 수 없으므로(컴파일 오류) 주의한다.
 
 ### 절대 규칙 13. 다듬기 모드 규칙
@@ -420,7 +421,6 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ```vba
     '=== <<버튼 이름>> 클릭 ===
     Dim btnSubmit As Selenium.WebElement  '제출 버튼
-
     Set btnSubmit = Driver.FindElementByCss("<<셀렉터>>", raise:=False)
     If btnSubmit Is Nothing Then Sel.PopUp "제출 버튼을 찾지 못했습니다.": Exit Sub
     If Not Sel.SafeClick(btnSubmit) Then Sel.PopUp "제출 버튼 클릭에 실패했습니다.": Exit Sub
@@ -432,7 +432,6 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ```vba
     '=== 팝업 닫기(있을 때만) ===
     Dim btnPopupClose As Selenium.WebElement  '팝업 닫기 버튼
-
     Set btnPopupClose = Driver.FindElementByCss("<<셀렉터>>", timeout:=3000, raise:=False)
     If Not btnPopupClose Is Nothing Then Sel.SafeClick btnPopupClose
 ```
@@ -456,10 +455,8 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
     '=== 상품 목록 수집 ===
     Dim firstProduct As Selenium.WebElement, productList As Selenium.WebElements  '첫 항목(대기용) / 항목 목록
     Dim i As Long, rowNo As Long  '루프 인덱스 / 기록 행 번호
-
     Set firstProduct = Driver.FindElementByCss("<<목록 항목 셀렉터>>", raise:=False)
     If firstProduct Is Nothing Then Sel.PopUp "상품 목록을 찾지 못했습니다.": Exit Sub
-
     Set productList = Driver.FindElementsByCss("<<목록 항목 셀렉터>>")
     rowNo = <<기록 시작 행>>
     For i = 1 To productList.Count
@@ -474,7 +471,6 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ```vba
     '=== 공지 목록 확인 ===
     Dim noticeList As Selenium.WebElements  '공지 목록
-
     Set noticeList = Driver.FindElementsByCss("<<셀렉터>>")
     If noticeList.Count > 0 Then
         Debug.Print noticeList.Count & "건 발견"
@@ -499,13 +495,10 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ```vba
     '=== iframe 진입 및 작업 ===
     Dim frmMain As Selenium.WebElement  '대상 iframe
-
     Set frmMain = Driver.FindElementByCss("<<iframe 셀렉터>>", raise:=False)
     If frmMain Is Nothing Then Sel.PopUp "<<iframe 이름>>을 찾지 못했습니다.": Exit Sub
     Driver.SwitchToFrame frmMain
-
     '… iframe 안에서는 일반 탐색(FindElementByCss)·클릭 패턴을 그대로 쓴다 …
-
     Driver.SwitchToDefaultContent  '★본문 복귀(미루면 ★상태 주석 ― 규칙 8)
 ```
 
@@ -525,7 +518,6 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ```vba
     '=== 얼럿창 확인 및 수락 ===
     Dim alertDelete As Selenium.Alert  '삭제 확인 얼럿창
-
     Set alertDelete = Driver.SwitchToAlert(timeout:=3000, raise:=False)
     If Not alertDelete Is Nothing Then
         Debug.Print alertDelete.Text
@@ -538,7 +530,6 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ```vba
     '=== 드롭다운 항목 선택 ===
     Dim selCategory As Selenium.WebElement  '분류 드롭다운
-
     Set selCategory = Driver.FindElementByCss("<<셀렉터>>", raise:=False)
     If selCategory Is Nothing Then Sel.PopUp "분류 드롭다운을 찾지 못했습니다.": Exit Sub
     selCategory.AsSelect.SelectByText "<<항목 문구>>"
@@ -556,7 +547,6 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
     '=== <<대상 이름>> 물리 클릭(최후 수단) ===
     '★전제: 마우스 WinAPI 사용 시 키오스크(Kiosk:=True) 전체화면·최상위 창 상태, 실행 중 마우스·키보드에 손대지 않기(최후 수단)
     Dim x As Long, y As Long  '모니터 좌표(대화에서 최초 1회만 선언, 이후 재사용 ― 4-1)
-
     If Not ETC.GetElementScreenPointByCss("<<셀렉터>>", x, y) Then Sel.PopUp "<<요소 이름>> 좌표를 얻지 못했습니다.": Exit Sub
     M.Click x, y
 ```
@@ -569,10 +559,8 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
     Dim btnOpenPopup As Selenium.WebElement  '새 창을 여는 버튼
     Dim jsIntercept As String                '가로채기용 JS 문자열
     Dim x As Long, y As Long                 '모니터 좌표(처음일 때만 선언 ― 4-1)
-
     Set btnOpenPopup = Driver.FindElementByCss("<<셀렉터>>", raise:=False)
     If btnOpenPopup Is Nothing Then Sel.PopUp "<<버튼 이름>>을 찾지 못했습니다.": Exit Sub
-
     jsIntercept = _
         "window.open = function(url, name) {" & _
         "  if (name) window.name = name;" & _
@@ -587,7 +575,6 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
         "  if (el.form) el.form.target = '_self';" & _
         "}"
     Driver.ExecuteScript jsIntercept, btnOpenPopup
-
     If Not ETC.GetElementScreenPointByCss("<<셀렉터>>", x, y) Then Sel.PopUp "<<버튼 이름>> 좌표를 얻지 못했습니다.": Exit Sub
     M.Click x, y
     Sel.Wait 3
@@ -696,7 +683,6 @@ End Sub
 ```vba
     '=== 아이디 입력 ===
     Dim txtUserId As Selenium.WebElement  '아이디 입력창(#user_id)
-
     Set txtUserId = Driver.FindElementByCss("#user_id", raise:=False)
     If txtUserId Is Nothing Then Sel.PopUp "아이디 입력창을 찾지 못했습니다.": Exit Sub
     Sel.Copy_and_Paste_Text_To_WebElement "hong123", txtUserId
@@ -720,17 +706,14 @@ End Sub
     Dim frmLogin As Selenium.WebElement  '로그인 iframe(iframe#loginFrame)
     Dim btnLogin As Selenium.WebElement  '로그인 버튼(button.login)
     Dim alertLogin As Selenium.Alert     '로그인 얼럿창
-
     Set frmLogin = Driver.FindElementByCss("iframe#loginFrame", raise:=False)
     If frmLogin Is Nothing Then Sel.PopUp "로그인 iframe을 찾지 못했습니다.": Exit Sub
     Driver.SwitchToFrame frmLogin
-
     Set btnLogin = Driver.FindElementByCss("button.login", raise:=False)
     If btnLogin Is Nothing Then Sel.PopUp "로그인 버튼을 찾지 못했습니다.": Exit Sub
     If Not Sel.SafeClick(btnLogin) Then Sel.PopUp "로그인 버튼 클릭에 실패했습니다.": Exit Sub
     Driver.SwitchToDefaultContent  '★본문 복귀(프레임 진입 후 필수)
     Sel.Wait 2
-
     Set alertLogin = Driver.SwitchToAlert(timeout:=3000, raise:=False)
     If Not alertLogin Is Nothing Then
         Debug.Print alertLogin.Text
@@ -757,11 +740,9 @@ End Sub
     '=== 로그인 버튼 물리 클릭(최후 수단) ===
     '★전제: 마우스 WinAPI 사용 시 키오스크(Kiosk:=True) 전체화면·최상위 창 상태, 실행 중 마우스·키보드에 손대지 않기(최후 수단)
     Dim x As Long, y As Long  '모니터 좌표(이 대화에서 처음 선언)
-
     If Not ETC.GetElementScreenPointByCss("button.login", x, y) Then Sel.PopUp "로그인 버튼 좌표를 얻지 못했습니다.": Exit Sub
     M.Click x, y
     Sel.Wait 2
-
     Set alertLogin = Driver.SwitchToAlert(timeout:=3000, raise:=False)
     If Not alertLogin Is Nothing Then
         Debug.Print alertLogin.Text

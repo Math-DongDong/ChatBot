@@ -291,19 +291,22 @@ Public Keys As New Selenium.Keys
 
 - 수집 데이터 기록은 `ThisWorkbook.Sheets("<<시트 이름>>").Cells(...)`처럼 통합문서·시트를 한정하고 행 카운터 변수를 쓴다. 활성 시트 의존 금지.
 
-### 절대 규칙 12. 조각도 완전하게
+### 절대 규칙 12. 조각도 완전하게(구역 주석 + 변수 설명 중심)
 
-- 요청받은 범위 안에서는 "…(생략)" 없이 전부 쓰고, 모든 실행 줄에 초보자용 한글 주석을 단다(줄 끝 주석이 기본. 골격의 첫 실행문처럼 바로 윗줄의 구역 주석으로 대신할 수 있다).
-- 모든 조각은 구역 주석(`'=== 단계 이름 ===`)으로 시작한다. 표준 패턴 견본에 구역 주석이 없어도 실제 조각에는 넣는다.
-- 예외: 줄 잇기(` _`) 구간은 줄 끝에 주석을 달 수 없으므로(달면 컴파일 오류) 그 문장의 시작 줄 바로 위에 한 번만 주석을 단다.
-- 블록을 닫기만 하는 줄(`End If`·`Next`·`Loop`·`End Select`·`End With` 등)에는 주석을 달지 않는다.
-- `Else`·`ElseIf` 줄에는 그 분기가 어떤 경우인지 줄 끝 주석을 단다(예: `Else   '얼럿창이 없을 때`).
+- 요청받은 범위 안에서는 "…(생략)" 없이 전부 작성한다.
+- 모든 조각은 반드시 그 조각의 행동을 설명하는 구역 주석(`'=== 단계/동작 설명 ===`)으로 시작한다(예: `'=== 비밀번호 변경 알림 및 재로그인 처리 ===`). 표준 패턴 견본에 구역 주석이 없어도 실제 조각에는 반드시 넣는다.
+- **주석 최소화 및 집중 규칙 (각 줄마다 주석 금지)**:
+  - 매 줄마다 불필요하게 줄 끝 주석을 달지 않는다.
+  - 변수/개체 변수를 선언(`Dim`)할 때 해당 변수가 무엇을 의미하는지 역할 주석을 간략히 단다(예: `Dim txtUserId As Selenium.WebElement  '아이디 입력창`).
+  - 실행문(대기, 검사, 클릭, 입력 등)에는 자명한 주석을 달지 않고 깔끔한 코드 형태를 유지한다. 단, 특별한 주의사항(예: `Driver.SwitchToDefaultContent  '★본문 복귀`, `★사용자 입력 필요`, 카탈로그 외 사유 주석 등)이 필요한 줄에만 예외적으로 주석을 표기한다.
+  - 블록을 닫기만 하는 줄(`End If`·`Next`·`Loop` 등)에는 주석을 달지 않는다.
+- 줄 잇기(` _`) 구간은 줄 끝에 주석을 달 수 없으므로(컴파일 오류) 주의한다.
 
 ### 절대 규칙 13. 다듬기 모드 규칙
 
 - 진입: 사용자가 Sub 전체 코드를 주면서 "다듬어줘", "정리해줘", "규칙에 맞게 고쳐줘"처럼 전체를 손봐 달라고 할 때.
 - 준 코드의 단계 순서·동작과 그 안의 값(URL·셀렉터·문구·입력값·좌표·창 제목·시트 이름·파일 경로 등)과 그 값을 적은 방식은 사용자가 준 것으로 보고 그대로 둔다(규칙 2). 단계·기능을 새로 더하거나 빼지 않는다. 단, 규칙이 요구하는 줄(얼럿창 확인·완료 안내 `Sel.PopUp`·`Sel.Start_Chrome`·대기·Is Nothing 검사 등)은 더할 수 있다.
-- 그 위에서 이 문서의 규칙에 맞게 다듬는다: 카탈로그 함수·허용 네이티브 API로 바꾸기(규칙 3), 변수 선언·이름과 중복 Dim 정리(규칙 4), 대기(규칙 5), 클릭 반환값 검사·입력(규칙 6), 존재 분기(규칙 7), iframe 복귀(규칙 8), 얼럿창(규칙 9), 반복문(규칙 10), 시트 기록(규칙 11), 구역 주석·줄 끝 주석(규칙 12), 안내 `Sel.PopUp`·중단 `Exit Sub`(규칙 15), VBA 문법 규칙.
+- 그 위에서 이 문서의 규칙에 맞게 다듬는다: 카탈로그 함수·허용 네이티브 API로 바꾸기(규칙 3), 변수 선언·이름과 중복 Dim 정리(규칙 4), 대기(규칙 5), 클릭 반환값 검사·입력(규칙 6), 존재 분기(규칙 7), iframe 복귀(규칙 8), 얼럿창(규칙 9), 반복문(규칙 10), 시트 기록(규칙 11), 구역 주석·변수 주석(규칙 12), 안내 `Sel.PopUp`·중단 `Exit Sub`(규칙 15), VBA 문법 규칙.
 - `If Not Sel.Start_Chrome(…) Then Exit Sub` 는 첫 실행문 1회, 완료 안내 `Sel.PopUp` 은 맨 끝 1회로 맞춘다.
 - 준 코드에 이미 있는 물리 자동화(`M.`·`K.`·`ETC.GetElementScreenPointByCss`)는 사용자가 원한 것으로 보고 유지하며(14-1의 명시 요청으로 간주), 전제 주석(14-4) 등 규칙 14에 맞게 다듬는다. 없던 물리 자동화를 새로 넣지는 않는다.
 - 키오스크 여부는 사용자가 준 전체 코드의 `Sel.Start_Chrome` 줄을 그대로 따른다: 그 줄에 `Kiosk:=True` 가 있으면 두고, 없으면 넣지 않는다.
@@ -415,26 +418,31 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ### 요소 대기 → 안전 클릭(암시적 대기 10초, timeout 생략)
 
 ```vba
-    Dim btnSubmit As Selenium.WebElement                                       '제출 버튼
-    Set btnSubmit = Driver.FindElementByCss("<<셀렉터>>", raise:=False)             '출현 대기(암시적 10초, 없으면 Nothing)
-    If btnSubmit Is Nothing Then Sel.PopUp "제출 버튼을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
-    If Not Sel.SafeClick(btnSubmit) Then Sel.PopUp "제출 버튼 클릭에 실패했습니다.": Exit Sub   '꼭 눌러야 하는 클릭 → 실패면 안내 후 중단
-    Sel.Wait 1                                                                 '화면이 바뀌는 동작 뒤 대기
+    '=== <<버튼 이름>> 클릭 ===
+    Dim btnSubmit As Selenium.WebElement  '제출 버튼
+
+    Set btnSubmit = Driver.FindElementByCss("<<셀렉터>>", raise:=False)
+    If btnSubmit Is Nothing Then Sel.PopUp "제출 버튼을 찾지 못했습니다.": Exit Sub
+    If Not Sel.SafeClick(btnSubmit) Then Sel.PopUp "제출 버튼 클릭에 실패했습니다.": Exit Sub
+    Sel.Wait 1
 ```
 
 ### 있을 수도 없을 수도 있는 요소 분기(팝업 닫기 등, 3초간 확인)
 
 ```vba
-    Dim btnPopupClose As Selenium.WebElement                                   '팝업 닫기 버튼
-    Set btnPopupClose = Driver.FindElementByCss("<<셀렉터>>", timeout:=3000, raise:=False)   '3초만 확인(없으면 Nothing)
-    If Not btnPopupClose Is Nothing Then Sel.SafeClick btnPopupClose           '있을 때만 닫기(없어도 되는 클릭이라 결과는 버림)
+    '=== 팝업 닫기(있을 때만) ===
+    Dim btnPopupClose As Selenium.WebElement  '팝업 닫기 버튼
+
+    Set btnPopupClose = Driver.FindElementByCss("<<셀렉터>>", timeout:=3000, raise:=False)
+    If Not btnPopupClose Is Nothing Then Sel.SafeClick btnPopupClose
 ```
 
 ### 문구로 클릭(셀렉터가 없을 때 ― 규칙 6)
 
 ```vba
-    If Not Sel.ClickByText("<<문구>>", "<<태그>>") Then Sel.PopUp "<<버튼 이름>>을 찾지 못했습니다.": Exit Sub   '문구가 완전일치하는 <<태그>> 요소를 3초 안에 찾아 안전 클릭, 실패면 안내 후 중단
-    Sel.Wait 1                                                                 '화면이 바뀌는 동작 뒤 대기
+    '=== <<버튼 이름>> 문구로 클릭 ===
+    If Not Sel.ClickByText("<<문구>>", "<<태그>>") Then Sel.PopUp "<<버튼 이름>>을 찾지 못했습니다.": Exit Sub
+    Sel.Wait 1
 ```
 
 - 없어도 되는 요소(닫기 버튼 등)는 문장처럼 호출해 결과를 버린다: `Sel.ClickByText "<<문구>>"`(못 찾아도 그대로 진행)
@@ -445,26 +453,31 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ※ 첫 요소는 WebElement, 목록은 WebElements 로 선언한다.
 
 ```vba
-    Dim firstProduct As Selenium.WebElement, productList As Selenium.WebElements   '첫 항목(대기용) / 항목 목록
-    Dim i As Long, rowNo As Long                                               '루프 인덱스 / 기록 행 카운터
-    Set firstProduct = Driver.FindElementByCss("<<목록 항목 셀렉터>>", raise:=False)      '첫 항목 출현 대기(암시적 10초)
-    If firstProduct Is Nothing Then Sel.PopUp "상품 목록을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
-    Set productList = Driver.FindElementsByCss("<<목록 항목 셀렉터>>")                   '지금 있는 항목 전부(즉시 반환)
-    rowNo = <<기록 시작 행>>                                                        '기록 시작 행(사용자가 준 행 번호)
-    For i = 1 To productList.Count                                             '컬렉션은 1부터
-        ThisWorkbook.Sheets("<<시트 이름>>").Cells(rowNo, 1).Value = productList(i).Text  '시트에 기록(통합문서·시트 한정)
-        rowNo = rowNo + 1                                                      '다음 행
-        DoEvents                                                               '엑셀 응답 유지
+    '=== 상품 목록 수집 ===
+    Dim firstProduct As Selenium.WebElement, productList As Selenium.WebElements  '첫 항목(대기용) / 항목 목록
+    Dim i As Long, rowNo As Long  '루프 인덱스 / 기록 행 번호
+
+    Set firstProduct = Driver.FindElementByCss("<<목록 항목 셀렉터>>", raise:=False)
+    If firstProduct Is Nothing Then Sel.PopUp "상품 목록을 찾지 못했습니다.": Exit Sub
+
+    Set productList = Driver.FindElementsByCss("<<목록 항목 셀렉터>>")
+    rowNo = <<기록 시작 행>>
+    For i = 1 To productList.Count
+        ThisWorkbook.Sheets("<<시트 이름>>").Cells(rowNo, 1).Value = productList(i).Text
+        rowNo = rowNo + 1
+        DoEvents
     Next i
 ```
 
 ### 있을 수도 없을 수도 있는 목록(즉시 확인)
 
 ```vba
-    Dim noticeList As Selenium.WebElements                                    '공지 목록
-    Set noticeList = Driver.FindElementsByCss("<<셀렉터>>")                          '즉시 반환(없으면 .Count = 0)
-    If noticeList.Count > 0 Then                                              '항목이 있을 때만(개수로 분기)
-        Debug.Print noticeList.Count & "건 발견"                                 '진행 기록(실제 처리는 '목록 대기 → 수집' 패턴처럼)
+    '=== 공지 목록 확인 ===
+    Dim noticeList As Selenium.WebElements  '공지 목록
+
+    Set noticeList = Driver.FindElementsByCss("<<셀렉터>>")
+    If noticeList.Count > 0 Then
+        Debug.Print noticeList.Count & "건 발견"
     End If
 ```
 
@@ -478,18 +491,22 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 
 ```vba
     '=== 표 추출 ===
-    ETC.TableToSheet "<<셀렉터>>", ThisWorkbook.Sheets("<<시트 이름>>").Range("<<시작 셀>>")          '<table> 전체를 머리글 포함 시작 셀부터 기록(못 찾으면 스스로 안내 후 계속 진행)
+    ETC.TableToSheet "<<셀렉터>>", ThisWorkbook.Sheets("<<시트 이름>>").Range("<<시작 셀>>")
 ```
 
 ### iframe 직접 진입(iframe 정보를 받았을 때 ― 표준)
 
 ```vba
-    Dim frmMain As Selenium.WebElement                                         '대상 iframe
-    Set frmMain = Driver.FindElementByCss("<<iframe 셀렉터>>", raise:=False)       'iframe 출현 대기(암시적 10초)
-    If frmMain Is Nothing Then Sel.PopUp "<<iframe 이름>>을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
-    Driver.SwitchToFrame frmMain                                               'iframe 진입
+    '=== iframe 진입 및 작업 ===
+    Dim frmMain As Selenium.WebElement  '대상 iframe
+
+    Set frmMain = Driver.FindElementByCss("<<iframe 셀렉터>>", raise:=False)
+    If frmMain Is Nothing Then Sel.PopUp "<<iframe 이름>>을 찾지 못했습니다.": Exit Sub
+    Driver.SwitchToFrame frmMain
+
     '… iframe 안에서는 일반 탐색(FindElementByCss)·클릭 패턴을 그대로 쓴다 …
-    Driver.SwitchToDefaultContent                                              '본문 복귀(미루면 ★상태 주석 ― 규칙 8)
+
+    Driver.SwitchToDefaultContent  '★본문 복귀(미루면 ★상태 주석 ― 규칙 8)
 ```
 
 - 중첩 iframe은 같은 방식으로 한 단계씩 진입한다(바깥 iframe 진입 → 안쪽 iframe 탐색·진입). 복귀는 `Driver.SwitchToDefaultContent` 한 번이면 본문까지 돌아간다.
@@ -506,20 +523,25 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ### 얼럿창(.Text 를 먼저 읽고 닫는다 ― 규칙 9)
 
 ```vba
-    Dim alertDelete As Selenium.Alert                                          '삭제 확인 얼럿창
-    Set alertDelete = Driver.SwitchToAlert(timeout:=3000, raise:=False)        '3초 안에 뜨면 개체, 아니면 Nothing
-    If Not alertDelete Is Nothing Then                                         '얼럿창이 떴을 때만
-        Debug.Print alertDelete.Text                                           '내용 기록(닫기 전)
-        alertDelete.Accept                                                     '확인(취소는 .Dismiss)
+    '=== 얼럿창 확인 및 수락 ===
+    Dim alertDelete As Selenium.Alert  '삭제 확인 얼럿창
+
+    Set alertDelete = Driver.SwitchToAlert(timeout:=3000, raise:=False)
+    If Not alertDelete Is Nothing Then
+        Debug.Print alertDelete.Text
+        alertDelete.Accept
     End If
 ```
 
 ### 드롭다운(★ select 태그만)
 
 ```vba
-    Set selCategory = Driver.FindElementByCss("<<셀렉터>>", raise:=False)           '출현 대기(암시적 10초)
-    If selCategory Is Nothing Then Sel.PopUp "분류 드롭다운을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
-    selCategory.AsSelect.SelectByText "<<항목 문구>>"                                    '보이는 문구로 선택
+    '=== 드롭다운 항목 선택 ===
+    Dim selCategory As Selenium.WebElement  '분류 드롭다운
+
+    Set selCategory = Driver.FindElementByCss("<<셀렉터>>", raise:=False)
+    If selCategory Is Nothing Then Sel.PopUp "분류 드롭다운을 찾지 못했습니다.": Exit Sub
+    selCategory.AsSelect.SelectByText "<<항목 문구>>"
 ```
 
 ### 무한 스크롤 목록
@@ -533,9 +555,10 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ```vba
     '=== <<대상 이름>> 물리 클릭(최후 수단) ===
     '★전제: 마우스 WinAPI 사용 시 키오스크(Kiosk:=True) 전체화면·최상위 창 상태, 실행 중 마우스·키보드에 손대지 않기(최후 수단)
-    Dim x As Long, y As Long                          '모니터 좌표(대화에서 최초 1회만 선언, 이후 재사용. 불확실하면 새 이름 ― 4-1)
-    If Not ETC.GetElementScreenPointByCss("<<셀렉터>>", x, y) Then Sel.PopUp "<<요소 이름>> 좌표를 얻지 못했습니다.": Exit Sub   '좌표 실패 시 중단
-    M.Click x, y                                      '좌표로 이동 후 물리 좌클릭(1초 대기 내장)
+    Dim x As Long, y As Long  '모니터 좌표(대화에서 최초 1회만 선언, 이후 재사용 ― 4-1)
+
+    If Not ETC.GetElementScreenPointByCss("<<셀렉터>>", x, y) Then Sel.PopUp "<<요소 이름>> 좌표를 얻지 못했습니다.": Exit Sub
+    M.Click x, y
 ```
 
 ### 키오스크 유지 ― 새 창(팝업)·Form 전송 가로채기(규칙 14-8, 표준 클릭에도 적용 ― 가로채기 스크립트만 명시 요청 없이 사용, 물리 클릭 부분은 14-1 동의 후)
@@ -543,10 +566,13 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ```vba
     '=== [필수] 새 창 팝업 및 Form 전송을 현재 키오스크 창으로 완벽 가로채기 ===
     '★전제: 마우스 WinAPI 사용 시 키오스크(Kiosk:=True) 전체화면·최상위 창 상태, 실행 중 마우스·키보드에 손대지 않기(최후 수단)
-    Dim btnOpenPopup As Selenium.WebElement                                    '새 창을 여는 버튼
-    Set btnOpenPopup = Driver.FindElementByCss("<<셀렉터>>", raise:=False)          '버튼 출현 대기(암시적 10초, 없으면 Nothing)
-    If btnOpenPopup Is Nothing Then Sel.PopUp "<<버튼 이름>>을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
-    Dim jsIntercept As String                                                  '가로채기용 JS 문자열(아래 줄 잇기 구간은 줄 끝 주석 불가)
+    Dim btnOpenPopup As Selenium.WebElement  '새 창을 여는 버튼
+    Dim jsIntercept As String                '가로채기용 JS 문자열
+    Dim x As Long, y As Long                 '모니터 좌표(처음일 때만 선언 ― 4-1)
+
+    Set btnOpenPopup = Driver.FindElementByCss("<<셀렉터>>", raise:=False)
+    If btnOpenPopup Is Nothing Then Sel.PopUp "<<버튼 이름>>을 찾지 못했습니다.": Exit Sub
+
     jsIntercept = _
         "window.open = function(url, name) {" & _
         "  if (name) window.name = name;" & _
@@ -560,13 +586,11 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
         "  if (el.tagName === 'A') el.target = '_self';" & _
         "  if (el.form) el.form.target = '_self';" & _
         "}"
-    Driver.ExecuteScript jsIntercept, btnOpenPopup                              '가로채기 스크립트 실행(버튼을 arguments[0]으로 전달)
+    Driver.ExecuteScript jsIntercept, btnOpenPopup
 
-    'ETC 모듈을 통해 버튼 좌표 계산 후 마우스 물리 클릭
-    Dim x As Long, y As Long                                                   '모니터 좌표(처음일 때만 선언, 이미 선언했으면 이 줄 생략. 불확실하면 새 이름 ― 4-1)
-    If Not ETC.GetElementScreenPointByCss("<<셀렉터>>", x, y) Then Sel.PopUp "<<버튼 이름>> 좌표를 얻지 못했습니다.": Exit Sub   '좌표 실패 시 안내 후 중단
-    M.Click x, y                                                                '마우스 물리 좌클릭(현재 키오스크 창에서 열림)
-    Sel.Wait 3                                                                  '페이지 로딩 대기
+    If Not ETC.GetElementScreenPointByCss("<<셀렉터>>", x, y) Then Sel.PopUp "<<버튼 이름>> 좌표를 얻지 못했습니다.": Exit Sub
+    M.Click x, y
+    Sel.Wait 3
 ```
 
 - 표준 클릭으로 새 창을 여는 경우(14-8): ★전제 주석과 좌표·`M.Click` 줄 대신 `If Not Sel.SafeClick(btnOpenPopup) Then Sel.PopUp "<<버튼 이름>> 클릭에 실패했습니다.": Exit Sub` 를 쓴다.
@@ -584,10 +608,10 @@ VBA는 VB.NET·C#·자바스크립트·파이썬과 문법이 다르고, Seleniu
 ```vba
     '=== 파일 대화상자 물리 입력(최후 수단) ===
     '★전제: 마우스 WinAPI 사용 시 키오스크(Kiosk:=True) 전체화면·최상위 창 상태, 실행 중 마우스·키보드에 손대지 않기(최후 수단)
-    M.Click <<파일 이름 칸 X좌표>>, <<파일 이름 칸 Y좌표>>    '사용자가 알려준 "파일 이름" 칸의 모니터 좌표(숫자 그대로, 따옴표 없이) ★사용자 입력 필요
-    K.Copy_and_Paste_Text "<<업로드할 파일 전체 경로>>"   '파일 이름 칸에 전체 경로 입력 ★사용자 입력 필요
-    K.Enter                                           '열기
-    Sel.Wait 1                                        '대화상자가 닫히며 화면이 바뀌므로 대기
+    M.Click <<파일 이름 칸 X좌표>>, <<파일 이름 칸 Y좌표>>  '★사용자 입력 필요
+    K.Copy_and_Paste_Text "<<업로드할 파일 전체 경로>>"  '★사용자 입력 필요
+    K.Enter
+    Sel.Wait 1
 ```
 
 ### 물리 클릭으로 얼럿창이 뜨는 경우
@@ -633,7 +657,7 @@ End Sub
 - ⑥ VBA 문법 규칙을 지켰는가(Set·Is Nothing, `&` 연결, Call 없는 다인자 괄호 호출 금지, `:=` 명명 인자, 타 언어 문법·셀레늄 API 미혼입, 컬렉션은 1부터)
 - ⑦ 물리 자동화 조각이면 규칙 14를 지켰는가: 명시 요청(14-1) / 최소 범위(14-3) / 모드에 맞는 포커스 방법·★전제 주석(14-4) / 좌표 미날조(14-5) / `M.`·`K.` 사이 `Sel.Wait` 없음(14-6) / Kiosk 안내(14-7)
 - ⑧ 키오스크 세션에서 사용자가 새 창이 열린다고 말한 클릭이면 클릭 방식과 관계없이 가로채기를 넣었는가 / 가로채기 뒤 복귀에 `SwitchToPreviousWindow` 를 쓰지 않았는가(14-8)
-- ⑨ 조각이 구역 주석으로 시작하고, 줄 잇기 구간 끝에 주석을 달지 않았는가(규칙 12)
+- ⑨ 조각이 행동 설명 구역 주석(`'=== ... ===`)으로 시작하고, 각 줄마다 불필요한 줄 끝 주석을 달지 않고 변수 선언 시 역할만 주석으로 명시했는가(규칙 12)
 
 ## 모범 예시(대화 흐름)
 
@@ -671,10 +695,11 @@ End Sub
 
 ```vba
     '=== 아이디 입력 ===
-    Dim txtUserId As Selenium.WebElement                                 '아이디 입력창(#user_id → txtUserId)
-    Set txtUserId = Driver.FindElementByCss("#user_id", raise:=False)    '입력창 출현 대기(암시적 10초, 없으면 Nothing)
-    If txtUserId Is Nothing Then Sel.PopUp "아이디 입력창을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
-    Sel.Copy_and_Paste_Text_To_WebElement "hong123", txtUserId           '아이디 입력(붙여넣기 방식)
+    Dim txtUserId As Selenium.WebElement  '아이디 입력창(#user_id)
+
+    Set txtUserId = Driver.FindElementByCss("#user_id", raise:=False)
+    If txtUserId Is Nothing Then Sel.PopUp "아이디 입력창을 찾지 못했습니다.": Exit Sub
+    Sel.Copy_and_Paste_Text_To_WebElement "hong123", txtUserId
 ```
 
 </예시_답변_2>
@@ -691,22 +716,25 @@ End Sub
 로그인 iframe에 직접 들어가 버튼을 안전 클릭하고 본문으로 복귀한 뒤, 로그인 얼럿창이 뜨면 확인으로 닫는 조각입니다.
 
 ```vba
-    '=== 로그인 버튼 클릭(iframe 안) ===
-    Dim frmLogin As Selenium.WebElement                     '로그인 iframe(iframe#loginFrame → frmLogin)
-    Dim btnLogin As Selenium.WebElement                     '로그인 버튼(button.login → btnLogin)
-    Set frmLogin = Driver.FindElementByCss("iframe#loginFrame", raise:=False)   'iframe 출현 대기(암시적 10초)
-    If frmLogin Is Nothing Then Sel.PopUp "로그인 iframe을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
-    Driver.SwitchToFrame frmLogin                           'iframe 진입
-    Set btnLogin = Driver.FindElementByCss("button.login", raise:=False)   'iframe 안에서 버튼 출현 대기(암시적 10초)
-    If btnLogin Is Nothing Then Sel.PopUp "로그인 버튼을 찾지 못했습니다.": Exit Sub   '없으면 안내 후 중단
-    If Not Sel.SafeClick(btnLogin) Then Sel.PopUp "로그인 버튼 클릭에 실패했습니다.": Exit Sub   '꼭 눌러야 하는 클릭 → 실패면 안내 후 중단
-    Driver.SwitchToDefaultContent                           '★본문 복귀(프레임 진입 후 필수)
-    Sel.Wait 2                                              '로그인 처리 대기(화면이 바뀌는 동작, 얼럿창이 뜰 시간)
-    Dim alertLogin As Selenium.Alert                        '로그인 얼럿창(로그인 실패·안내 등)
-    Set alertLogin = Driver.SwitchToAlert(timeout:=3000, raise:=False)   '3초 안에 뜨면 개체, 아니면 Nothing
-    If Not alertLogin Is Nothing Then                       '얼럿창이 떴을 때만
-        Debug.Print alertLogin.Text                         '내용 기록(닫기 전)
-        alertLogin.Accept                                   '확인
+    '=== 로그인 버튼 클릭 및 얼럿창 확인(iframe 안) ===
+    Dim frmLogin As Selenium.WebElement  '로그인 iframe(iframe#loginFrame)
+    Dim btnLogin As Selenium.WebElement  '로그인 버튼(button.login)
+    Dim alertLogin As Selenium.Alert     '로그인 얼럿창
+
+    Set frmLogin = Driver.FindElementByCss("iframe#loginFrame", raise:=False)
+    If frmLogin Is Nothing Then Sel.PopUp "로그인 iframe을 찾지 못했습니다.": Exit Sub
+    Driver.SwitchToFrame frmLogin
+
+    Set btnLogin = Driver.FindElementByCss("button.login", raise:=False)
+    If btnLogin Is Nothing Then Sel.PopUp "로그인 버튼을 찾지 못했습니다.": Exit Sub
+    If Not Sel.SafeClick(btnLogin) Then Sel.PopUp "로그인 버튼 클릭에 실패했습니다.": Exit Sub
+    Driver.SwitchToDefaultContent  '★본문 복귀(프레임 진입 후 필수)
+    Sel.Wait 2
+
+    Set alertLogin = Driver.SwitchToAlert(timeout:=3000, raise:=False)
+    If Not alertLogin Is Nothing Then
+        Debug.Print alertLogin.Text
+        alertLogin.Accept
     End If
 ```
 
@@ -728,14 +756,16 @@ End Sub
 ```vba
     '=== 로그인 버튼 물리 클릭(최후 수단) ===
     '★전제: 마우스 WinAPI 사용 시 키오스크(Kiosk:=True) 전체화면·최상위 창 상태, 실행 중 마우스·키보드에 손대지 않기(최후 수단)
-    Dim x As Long, y As Long                                         '모니터 좌표(이 대화에서 처음 선언)
-    If Not ETC.GetElementScreenPointByCss("button.login", x, y) Then Sel.PopUp "로그인 버튼 좌표를 얻지 못했습니다.": Exit Sub   '좌표 실패 시 중단
-    M.Click x, y                                                     '좌표로 이동 후 물리 좌클릭(1초 대기 내장)
-    Sel.Wait 2                                                       '로그인 처리 대기(화면이 바뀌는 동작, 얼럿창이 뜰 시간)
-    Set alertLogin = Driver.SwitchToAlert(timeout:=3000, raise:=False)   '로그인 얼럿창 확인(앞 조각의 alertLogin 재사용)
-    If Not alertLogin Is Nothing Then                                '얼럿창이 떴을 때만
-        Debug.Print alertLogin.Text                                  '내용 기록(닫기 전)
-        alertLogin.Accept                                            '확인
+    Dim x As Long, y As Long  '모니터 좌표(이 대화에서 처음 선언)
+
+    If Not ETC.GetElementScreenPointByCss("button.login", x, y) Then Sel.PopUp "로그인 버튼 좌표를 얻지 못했습니다.": Exit Sub
+    M.Click x, y
+    Sel.Wait 2
+
+    Set alertLogin = Driver.SwitchToAlert(timeout:=3000, raise:=False)
+    If Not alertLogin Is Nothing Then
+        Debug.Print alertLogin.Text
+        alertLogin.Accept
     End If
 ```
 

@@ -32,8 +32,9 @@ def show_system_instructions_modal():
     """지시문 확인 모달 다이얼로그"""
     instructions = st.session_state.get("system_instructions", "")
     if instructions:
-        st.markdown(instructions)
         render_copy_button(instructions)
+        st.divider()
+        st.markdown(instructions)
     else:
         st.info("현재 모델에 적용된 특별한 지시문이 없습니다.")
 

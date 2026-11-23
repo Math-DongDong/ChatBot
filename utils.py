@@ -38,11 +38,12 @@ def render_copy_button(text: str):
     textarea_value = html.escape(text)
     html_code = (
         ""
-        '<div style="font-family: Arial, sans-serif; margin-bottom: 0.75rem;">'
-        '    <button id="copyButton" style="padding: 0.5rem 0.9rem; border: 1px solid #2563eb; border-radius: 0.5rem; background: #2563eb; color: #ffffff; font-size: 0.95rem; cursor: pointer;">'
+        '<style>body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }</style>'
+        '<div style="display: flex; align-items: center; gap: 0.75rem;">'
+        '    <button id="copyButton" style="padding: 0.45rem 0.9rem; border: 1px solid #2563eb; border-radius: 0.5rem; background: #2563eb; color: #ffffff; font-size: 0.9rem; font-weight: 500; cursor: pointer;">'
         "        📋 지시문 복사하기"
         "    </button>"
-        '    <span id="copyStatus" style="margin-left: 0.75rem; color: #2563eb; font-size: 0.95rem;"></span>'
+        '    <span id="copyStatus" style="color: #2563eb; font-size: 0.9rem; font-weight: 500;"></span>'
         '    <textarea id="copySource" style="position:absolute; left:-9999px; top:0;">'
         + textarea_value
         + "</textarea>"
@@ -67,7 +68,7 @@ def render_copy_button(text: str):
         "</script>"
         ""
     )
-    components.html(html_code, height=120)
+    components.html(html_code, height=45)
 
 
 def process_uploaded_files(staged_files: list) -> tuple[list, list[Image.Image], list[str]]:
